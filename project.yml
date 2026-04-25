@@ -42,5 +42,6 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: de.papa.vokabelapp
         INFOPLIST_FILE: App/Info.plist
+        LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/../Frameworks @executable_path/Frameworks"
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         CODE_SIGN_STYLE: Automatic
