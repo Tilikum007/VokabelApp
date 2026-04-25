@@ -8,9 +8,9 @@ public struct ContentView: View {
     }
 
     public var body: some View {
-        NavigationStack {
-            ZStack {
-                NordicPalette.snow.ignoresSafeArea()
+        ZStack {
+            NordicPalette.snow.ignoresSafeArea()
+            ScrollView {
                 VStack(spacing: 24) {
                     HeaderView()
                     LoginView(viewModel: viewModel, auth: viewModel.auth)
@@ -22,8 +22,9 @@ public struct ContentView: View {
                 .padding(24)
                 .frame(maxWidth: 760)
             }
-            .task { await viewModel.load() }
         }
+        .platformContentFrame()
+        .task { await viewModel.load() }
     }
 }
 
@@ -231,10 +232,13 @@ private struct QuestionView: View {
 
             if let feedback = viewModel.feedback {
                 FeedbackView(feedback: feedback)
-                    .transition(.scale(scale: 0.82).combined(with: .opacity))
+                    .transition(.opacity)
+            } else {
+                Color.clear
+                    .frame(height: 64)
             }
         }
-        .animation(.spring(response: 0.34, dampingFraction: 0.72), value: viewModel.feedback?.id)
+        .animation(.easeOut(duration: 0.18), value: viewModel.feedback?.id)
         .padding(28)
         .background(.white.opacity(0.72))
         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
@@ -265,6 +269,7 @@ private struct FeedbackView: View {
             RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .stroke(color.opacity(0.22), lineWidth: 1)
         )
+        .frame(minHeight: 64)
         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 
@@ -300,4 +305,15 @@ private enum NordicPalette {
     static let fjord = Color(red: 0.05, green: 0.32, blue: 0.42)
     static let red = Color(red: 0.73, green: 0.08, blue: 0.13)
     static let gold = Color(red: 0.58, green: 0.39, blue: 0.08)
+}
+
+private extension View {
+    @ViewBuilder
+    func platformContentFrame() -> some View {
+        #if os(macOS)
+        self.frame(width: 900, height: 760)
+        #else
+        self
+        #endif
+    }
 }
