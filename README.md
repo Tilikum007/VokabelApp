@@ -53,7 +53,7 @@ The optional adapter is already present in:
 
 Recommended Drive scope:
 
-`https://www.googleapis.com/auth/drive.file`
+`https://www.googleapis.com/auth/drive`
 
 This keeps the app limited to files opened by or shared with the app instead of requesting unrestricted Drive access.
 

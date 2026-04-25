@@ -11,7 +11,7 @@ import AppKit
 
 @MainActor
 public final class GoogleSignInSessionProvider {
-    public static let driveScope = "https://www.googleapis.com/auth/drive.file"
+    public static let driveScope = "https://www.googleapis.com/auth/drive"
 
     public init() {}
 
@@ -116,7 +116,7 @@ public enum GoogleSignInSessionProviderError: LocalizedError {
 #else
 @MainActor
 public final class GoogleSignInSessionProvider {
-    public static let driveScope = "https://www.googleapis.com/auth/drive.file"
+    public static let driveScope = "https://www.googleapis.com/auth/drive"
 
     public init() {}
 

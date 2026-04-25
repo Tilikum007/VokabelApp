@@ -35,7 +35,7 @@ open VokabelApp.xcodeproj
 5. Add this scope:
 
 ```text
-https://www.googleapis.com/auth/drive.file
+https://www.googleapis.com/auth/drive
 ```
 
 6. Replace the placeholders in `App/Info.plist`:
@@ -51,6 +51,6 @@ and:
 <string>com.googleusercontent.apps...</string>
 ```
 
-7. In Google Drive, open or share `MASTER_vokabelheft_norwegisch.csv` with the app flow so `drive.file` can access it.
+7. In Google Drive, verify that `MASTER_vokabelheft_norwegisch.csv` is reachable by the signed-in account. The app uses the Drive scope so it can download and overwrite this existing master CSV.
 
 Until the OAuth placeholders are replaced, the app builds and runs locally but Google sign-in cannot complete.

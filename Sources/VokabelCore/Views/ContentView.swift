@@ -13,11 +13,11 @@ public struct ContentView: View {
                 NordicPalette.snow.ignoresSafeArea()
                 VStack(spacing: 24) {
                     HeaderView()
-                    LoginView(viewModel: viewModel)
+                    LoginView(viewModel: viewModel, auth: viewModel.auth)
                     ControlsView(viewModel: viewModel)
                     QuestionView(viewModel: viewModel)
                     Spacer(minLength: 0)
-                    SyncStatusView(message: viewModel.store.lastSyncMessage)
+                    SyncStatusView(store: viewModel.store)
                 }
                 .padding(24)
                 .frame(maxWidth: 760)
@@ -29,27 +29,28 @@ public struct ContentView: View {
 
 private struct LoginView: View {
     @ObservedObject var viewModel: TrainerViewModel
+    @ObservedObject var auth: AuthCoordinator
 
     var body: some View {
         VStack(spacing: 12) {
             HStack {
                 Label(
-                    viewModel.auth.isSignedIn ? viewModel.auth.email : "Google Drive",
-                    systemImage: viewModel.auth.isSignedIn ? "person.crop.circle.fill" : "person.crop.circle"
+                    auth.isSignedIn ? auth.email : "Google Drive",
+                    systemImage: auth.isSignedIn ? "person.crop.circle.fill" : "person.crop.circle"
                 )
                 .foregroundStyle(NordicPalette.ink)
 
                 Spacer()
 
                 Toggle("Anmeldung merken", isOn: Binding(
-                    get: { viewModel.auth.rememberLogin },
-                    set: { viewModel.auth.updateRememberLogin($0) }
+                    get: { auth.rememberLogin },
+                    set: { auth.updateRememberLogin($0) }
                 ))
                 .toggleStyle(.switch)
             }
 
             HStack {
-                if !viewModel.auth.isSignedIn {
+                if !auth.isSignedIn {
                     Button {
                         Task { await viewModel.signInAndSync() }
                     } label: {
@@ -69,9 +70,9 @@ private struct LoginView: View {
                     Label("Zu Drive sichern", systemImage: "icloud.and.arrow.up")
                 }
 
-                if viewModel.auth.isSignedIn {
+                if auth.isSignedIn {
                     Button(role: .destructive) {
-                        viewModel.auth.signOut()
+                        auth.signOut()
                     } label: {
                         Label("Abmelden", systemImage: "rectangle.portrait.and.arrow.right")
                     }
@@ -80,7 +81,7 @@ private struct LoginView: View {
             .buttonStyle(.bordered)
             .controlSize(.small)
 
-            Text(viewModel.auth.statusMessage)
+            Text(auth.statusMessage)
                 .font(.footnote)
                 .foregroundStyle(NordicPalette.stone)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -218,12 +219,12 @@ private struct QuestionView: View {
 }
 
 private struct SyncStatusView: View {
-    let message: String
+    @ObservedObject var store: VocabularyStore
 
     var body: some View {
         HStack(spacing: 8) {
             Image(systemName: "icloud.and.arrow.down")
-            Text(message)
+            Text(store.lastSyncMessage)
         }
         .font(.footnote)
         .foregroundStyle(NordicPalette.stone)
