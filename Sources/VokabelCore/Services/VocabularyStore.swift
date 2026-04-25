@@ -5,6 +5,8 @@ public final class VocabularyStore: ObservableObject {
     @Published public private(set) var entries: [VocabularyEntry] = []
     @Published public private(set) var isSyncing = false
     @Published public private(set) var lastSyncMessage = "Noch nicht synchronisiert"
+    @Published public private(set) var lastSyncResult: SyncResult = .idle
+    @Published public private(set) var lastSyncDate: Date?
 
     private let codec = CSVCodec()
     private let localFileName: String
@@ -23,7 +25,7 @@ public final class VocabularyStore: ObservableObject {
         if let localText = try? String(contentsOf: localURL(), encoding: .utf8),
            let decoded = try? codec.decode(localText) {
             entries = decoded
-            lastSyncMessage = "Lokale Datei geladen"
+            setSyncMessage("Lokale Datei geladen", result: .success)
             return
         }
 
@@ -32,35 +34,37 @@ public final class VocabularyStore: ObservableObject {
            let decoded = try? codec.decode(bundledText) {
             entries = decoded
             try? persist()
-            lastSyncMessage = "Beispieldaten geladen"
+            setSyncMessage("Beispieldaten geladen", result: .success)
         }
     }
 
     public func syncFromDrive(accessToken: String) async {
         isSyncing = true
+        setSyncMessage("Lade von Google Drive ...", result: .working)
         defer { isSyncing = false }
 
         do {
             let csv = try await driveClient.downloadCSV(fileID: driveFileID, accessToken: accessToken)
             entries = try codec.decode(csv)
             try persist()
-            lastSyncMessage = "Von Google Drive geladen"
+            setSyncMessage("Von Google Drive geladen", result: .success)
         } catch {
-            lastSyncMessage = "Drive-Download fehlgeschlagen: \(error.localizedDescription)"
+            setSyncMessage("Drive-Download fehlgeschlagen: \(error.localizedDescription)", result: .failure)
         }
     }
 
     public func uploadToDrive(accessToken: String) async {
         isSyncing = true
+        setSyncMessage("Speichere nach Google Drive ...", result: .working)
         defer { isSyncing = false }
 
         do {
             let csv = codec.encode(entries)
             try await driveClient.uploadCSV(csv, fileID: driveFileID, accessToken: accessToken)
             try persist()
-            lastSyncMessage = "Nach Google Drive hochgeladen"
+            setSyncMessage("Nach Google Drive hochgeladen", result: .success)
         } catch {
-            lastSyncMessage = "Drive-Upload fehlgeschlagen: \(error.localizedDescription)"
+            setSyncMessage("Drive-Upload fehlgeschlagen: \(error.localizedDescription)", result: .failure)
         }
     }
 
@@ -77,7 +81,13 @@ public final class VocabularyStore: ObservableObject {
     }
 
     public func setSyncMessage(_ message: String) {
+        setSyncMessage(message, result: .failure)
+    }
+
+    public func setSyncMessage(_ message: String, result: SyncResult) {
         lastSyncMessage = message
+        lastSyncResult = result
+        lastSyncDate = Date()
     }
 
     private func persist() throws {
@@ -106,3 +116,10 @@ public final class VocabularyStore: ObservableObject {
 }
 
 private final class BundleToken {}
+
+public enum SyncResult: Equatable {
+    case idle
+    case working
+    case success
+    case failure
+}

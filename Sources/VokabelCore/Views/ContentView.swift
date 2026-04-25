@@ -104,6 +104,7 @@ private struct LoginView: View {
                 Label("Anmelden", systemImage: "person.badge.key")
                     .frame(maxWidth: isCompact ? .infinity : nil)
             }
+            .disabled(auth.isSigningIn || viewModel.store.isSyncing)
         }
 
         Button {
@@ -112,6 +113,7 @@ private struct LoginView: View {
             Label("Laden", systemImage: "icloud.and.arrow.down")
                 .frame(maxWidth: isCompact ? .infinity : nil)
         }
+        .disabled(auth.isSigningIn || viewModel.store.isSyncing)
 
         Button {
             Task { await viewModel.uploadNow() }
@@ -119,6 +121,7 @@ private struct LoginView: View {
             Label("Sichern", systemImage: "icloud.and.arrow.up")
                 .frame(maxWidth: isCompact ? .infinity : nil)
         }
+        .disabled(auth.isSigningIn || viewModel.store.isSyncing)
 
         if auth.isSignedIn {
             Button(role: .destructive) {
@@ -127,6 +130,7 @@ private struct LoginView: View {
                 Label("Abmelden", systemImage: "rectangle.portrait.and.arrow.right")
                     .frame(maxWidth: isCompact ? .infinity : nil)
             }
+            .disabled(auth.isSigningIn || viewModel.store.isSyncing)
         }
     }
 }
@@ -356,12 +360,74 @@ private struct SyncStatusView: View {
     @ObservedObject var store: VocabularyStore
 
     var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "icloud.and.arrow.down")
-            Text(store.lastSyncMessage)
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: iconName)
+                .font(.title3)
+                .symbolEffect(.pulse, isActive: store.isSyncing)
+                .frame(width: 28)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.headline)
+                Text(store.lastSyncMessage)
+                    .font(.callout)
+                    .fixedSize(horizontal: false, vertical: true)
+                if let date = store.lastSyncDate {
+                    Text(date, style: .time)
+                        .font(.caption)
+                        .foregroundStyle(NordicPalette.stone)
+                }
+            }
+
+            Spacer(minLength: 0)
         }
-        .font(.footnote)
-        .foregroundStyle(NordicPalette.stone)
+        .foregroundStyle(color)
+        .padding(14)
+        .frame(maxWidth: 760)
+        .background(color.opacity(0.10))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(color.opacity(0.22), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .animation(.easeOut(duration: 0.18), value: store.lastSyncMessage)
+    }
+
+    private var title: String {
+        switch store.lastSyncResult {
+        case .idle:
+            "Synchronisation"
+        case .working:
+            "Synchronisation laeuft"
+        case .success:
+            "Synchronisation erfolgreich"
+        case .failure:
+            "Synchronisation fehlgeschlagen"
+        }
+    }
+
+    private var iconName: String {
+        switch store.lastSyncResult {
+        case .idle:
+            "icloud"
+        case .working:
+            "arrow.triangle.2.circlepath.icloud"
+        case .success:
+            "checkmark.icloud"
+        case .failure:
+            "exclamationmark.icloud"
+        }
+    }
+
+    private var color: Color {
+        switch store.lastSyncResult {
+        case .idle, .working:
+            NordicPalette.stone
+        case .success:
+            NordicPalette.fjord
+        case .failure:
+            NordicPalette.red
+        }
     }
 }
 

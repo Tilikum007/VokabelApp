@@ -13,7 +13,9 @@ import AppKit
 public final class GoogleSignInSessionProvider {
     public static let driveScope = "https://www.googleapis.com/auth/drive"
 
-    public init() {}
+    public init() {
+        Self.configureIfNeeded()
+    }
 
     public func restorePreviousSession() async -> AuthSession? {
         await withCheckedContinuation { continuation in
@@ -30,7 +32,7 @@ public final class GoogleSignInSessionProvider {
         }
         return try await signIn(presenting: viewController)
         #elseif os(macOS)
-        guard let window = NSApplication.shared.keyWindow ?? NSApplication.shared.mainWindow else {
+        guard let window = Self.currentWindow() else {
             throw GoogleSignInSessionProviderError.missingPresentationContext
         }
         return try await signIn(presenting: window)
@@ -67,6 +69,16 @@ public final class GoogleSignInSessionProvider {
         GIDSignIn.sharedInstance.handle(url)
     }
 
+    private static func configureIfNeeded() {
+        guard GIDSignIn.sharedInstance.configuration == nil,
+              let clientID = Bundle.main.object(forInfoDictionaryKey: "GIDClientID") as? String,
+              !clientID.isEmpty else {
+            return
+        }
+
+        GIDSignIn.sharedInstance.configuration = GIDConfiguration(clientID: clientID)
+    }
+
     nonisolated private static func makeSession(from user: GIDGoogleUser) -> AuthSession {
         AuthSession(
             email: user.profile?.email ?? "Google",
@@ -96,6 +108,12 @@ public final class GoogleSignInSessionProvider {
             return topViewController(from: presented)
         }
         return viewController
+    }
+    #elseif os(macOS)
+    private static func currentWindow() -> NSWindow? {
+        NSApplication.shared.keyWindow
+            ?? NSApplication.shared.mainWindow
+            ?? NSApplication.shared.windows.first { $0.isVisible && !$0.isMiniaturized }
     }
     #endif
 }

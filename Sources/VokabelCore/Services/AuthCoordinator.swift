@@ -5,6 +5,7 @@ public final class AuthCoordinator: ObservableObject {
     @Published public private(set) var session: AuthSession?
     @Published public var rememberLogin: Bool
     @Published public private(set) var statusMessage: String
+    @Published public private(set) var isSigningIn = false
 
     private let keychain: KeychainSessionStore
     private let googleSignIn: GoogleSignInSessionProvider
@@ -74,6 +75,10 @@ public final class AuthCoordinator: ObservableObject {
     }
 
     public func signIn() async {
+        isSigningIn = true
+        statusMessage = "Google-Anmeldung wird gestartet"
+        defer { isSigningIn = false }
+
         do {
             acceptGoogleSession(try await googleSignIn.signInFromCurrentContext())
         } catch {
