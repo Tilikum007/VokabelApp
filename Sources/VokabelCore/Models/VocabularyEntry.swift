@@ -26,6 +26,17 @@ public enum DirectionMode: String, CaseIterable, Identifiable {
     case alternating = "Abwechselnd"
 
     public var id: String { rawValue }
+
+    public var shortTitle: String {
+        switch self {
+        case .germanToNorwegian:
+            "DE -> NO"
+        case .norwegianToGerman:
+            "NO -> DE"
+        case .alternating:
+            "Mix"
+        }
+    }
 }
 
 public enum AnswerMode: String, CaseIterable, Identifiable {

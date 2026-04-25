@@ -29,58 +29,38 @@ public struct ContentView: View {
 }
 
 private struct LoginView: View {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @ObservedObject var viewModel: TrainerViewModel
     @ObservedObject var auth: AuthCoordinator
 
     var body: some View {
         VStack(spacing: 12) {
-            HStack {
-                Label(
-                    auth.isSignedIn ? auth.email : "Google Drive",
-                    systemImage: auth.isSignedIn ? "person.crop.circle.fill" : "person.crop.circle"
-                )
-                .foregroundStyle(NordicPalette.ink)
-
-                Spacer()
-
-                Toggle("Anmeldung merken", isOn: Binding(
-                    get: { auth.rememberLogin },
-                    set: { auth.updateRememberLogin($0) }
-                ))
-                .toggleStyle(.switch)
-            }
-
-            HStack {
-                if !auth.isSignedIn {
-                    Button {
-                        Task { await viewModel.signInAndSync() }
-                    } label: {
-                        Label("Mit Google anmelden", systemImage: "person.badge.key")
-                    }
+            if isCompact {
+                VStack(alignment: .leading, spacing: 10) {
+                    accountLabel
+                    rememberToggle
                 }
-
-                Button {
-                    Task { await viewModel.syncNow() }
-                } label: {
-                    Label("Von Drive laden", systemImage: "icloud.and.arrow.down")
-                }
-
-                Button {
-                    Task { await viewModel.uploadNow() }
-                } label: {
-                    Label("Zu Drive sichern", systemImage: "icloud.and.arrow.up")
-                }
-
-                if auth.isSignedIn {
-                    Button(role: .destructive) {
-                        auth.signOut()
-                    } label: {
-                        Label("Abmelden", systemImage: "rectangle.portrait.and.arrow.right")
-                    }
+            } else {
+                HStack {
+                    accountLabel
+                    Spacer()
+                    rememberToggle
                 }
             }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
+
+            if isCompact {
+                VStack(spacing: 8) {
+                    driveButtons
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.regular)
+            } else {
+                HStack {
+                    driveButtons
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+            }
 
             Text(auth.statusMessage)
                 .font(.footnote)
@@ -90,6 +70,64 @@ private struct LoginView: View {
         .padding(16)
         .background(.white.opacity(0.58))
         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+
+    private var isCompact: Bool {
+        horizontalSizeClass == .compact
+    }
+
+    private var accountLabel: some View {
+        Label(
+            auth.isSignedIn ? auth.email : "Google Drive",
+            systemImage: auth.isSignedIn ? "person.crop.circle.fill" : "person.crop.circle"
+        )
+        .foregroundStyle(NordicPalette.ink)
+        .lineLimit(1)
+        .minimumScaleFactor(0.82)
+    }
+
+    private var rememberToggle: some View {
+        Toggle("Anmeldung merken", isOn: Binding(
+            get: { auth.rememberLogin },
+            set: { auth.updateRememberLogin($0) }
+        ))
+        .toggleStyle(.switch)
+        .lineLimit(1)
+    }
+
+    @ViewBuilder
+    private var driveButtons: some View {
+        if !auth.isSignedIn {
+            Button {
+                Task { await viewModel.signInAndSync() }
+            } label: {
+                Label("Anmelden", systemImage: "person.badge.key")
+                    .frame(maxWidth: isCompact ? .infinity : nil)
+            }
+        }
+
+        Button {
+            Task { await viewModel.syncNow() }
+        } label: {
+            Label("Laden", systemImage: "icloud.and.arrow.down")
+                .frame(maxWidth: isCompact ? .infinity : nil)
+        }
+
+        Button {
+            Task { await viewModel.uploadNow() }
+        } label: {
+            Label("Sichern", systemImage: "icloud.and.arrow.up")
+                .frame(maxWidth: isCompact ? .infinity : nil)
+        }
+
+        if auth.isSignedIn {
+            Button(role: .destructive) {
+                auth.signOut()
+            } label: {
+                Label("Abmelden", systemImage: "rectangle.portrait.and.arrow.right")
+                    .frame(maxWidth: isCompact ? .infinity : nil)
+            }
+        }
     }
 }
 
@@ -108,6 +146,7 @@ private struct HeaderView: View {
 }
 
 private struct ControlsView: View {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @ObservedObject var viewModel: TrainerViewModel
 
     var body: some View {
@@ -119,10 +158,10 @@ private struct ControlsView: View {
             }
             .pickerStyle(.segmented)
 
-            HStack {
+            AdaptiveControlsStack(isCompact: isCompact) {
                 Picker("Richtung", selection: $viewModel.directionMode) {
                     ForEach(DirectionMode.allCases) { mode in
-                        Text(mode.rawValue).tag(mode)
+                        Text(isCompact ? mode.shortTitle : mode.rawValue).tag(mode)
                     }
                 }
 
@@ -134,7 +173,7 @@ private struct ControlsView: View {
             }
             .pickerStyle(.segmented)
 
-            HStack {
+            AdaptiveControlsStack(isCompact: isCompact) {
                 Picker("Level", selection: Binding(
                     get: { viewModel.filter.level ?? -1 },
                     set: { viewModel.filter.level = $0 == -1 ? nil : $0 }
@@ -170,6 +209,10 @@ private struct ControlsView: View {
             .tint(NordicPalette.fjord)
         }
     }
+
+    private var isCompact: Bool {
+        horizontalSizeClass == .compact
+    }
 }
 
 private struct QuestionView: View {
@@ -198,6 +241,8 @@ private struct QuestionView: View {
                             } label: {
                                 Text(option)
                                     .frame(maxWidth: .infinity)
+                                    .lineLimit(2)
+                                    .minimumScaleFactor(0.78)
                             }
                                 .buttonStyle(.bordered)
                                 .controlSize(.large)
@@ -242,6 +287,28 @@ private struct QuestionView: View {
         .padding(28)
         .background(.white.opacity(0.72))
         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+}
+
+private struct AdaptiveControlsStack<Content: View>: View {
+    let isCompact: Bool
+    let content: Content
+
+    init(isCompact: Bool, @ViewBuilder content: () -> Content) {
+        self.isCompact = isCompact
+        self.content = content()
+    }
+
+    var body: some View {
+        if isCompact {
+            VStack(spacing: 10) {
+                content
+            }
+        } else {
+            HStack {
+                content
+            }
+        }
     }
 }
 
