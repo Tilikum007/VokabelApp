@@ -8,6 +8,9 @@ public final class TrainerViewModel: ObservableObject {
     @Published public var answerText = ""
     @Published public var feedback: FeedbackState?
     @Published public var sessionSize = 10
+    @Published public var sessionTotal = 0
+    @Published public var correctCount = 0
+    @Published public var wrongCount = 0
     @Published public var remaining = 0
     @Published public var directionMode: DirectionMode = .germanToNorwegian
     @Published public var answerMode: AnswerMode
@@ -31,6 +34,10 @@ public final class TrainerViewModel: ObservableObject {
 
     public var lessons: [String] {
         store.entries.map(\.lesson).filter { !$0.isEmpty }.uniqued().sorted()
+    }
+
+    public var sessionSizeOptions: [Int] {
+        [5, 10, 15, 20, 30, 50]
     }
 
     public func load() async {
@@ -79,6 +86,9 @@ public final class TrainerViewModel: ObservableObject {
             count: sessionSize,
             lastEntryID: lastEntryID
         )
+        sessionTotal = session.count
+        correctCount = 0
+        wrongCount = 0
         remaining = session.count
         feedback = nil
         directionIndex = 0
@@ -105,6 +115,11 @@ public final class TrainerViewModel: ObservableObject {
             correctLevelDelta: correctLevelDelta
         )
         feedback = FeedbackState(grade: grade, expectedAnswer: question.expectedAnswer)
+        if grade == .correct {
+            correctCount += 1
+        } else {
+            wrongCount += 1
+        }
         lastEntryID = question.entryID
         nextQuestion()
     }

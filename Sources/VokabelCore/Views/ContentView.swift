@@ -15,8 +15,8 @@ public struct ContentView: View {
                     HeaderView()
                     LoginView(viewModel: viewModel, auth: viewModel.auth)
                     SyncStatusView(store: viewModel.store)
-                    ControlsView(viewModel: viewModel)
-                    QuestionView(viewModel: viewModel)
+                    SettingsView(viewModel: viewModel)
+                    TrainingView(viewModel: viewModel)
                     Spacer(minLength: 0)
                 }
                 .padding(24)
@@ -149,69 +149,82 @@ private struct HeaderView: View {
     }
 }
 
-private struct ControlsView: View {
+private struct SettingsView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @ObservedObject var viewModel: TrainerViewModel
 
     var body: some View {
-        VStack(spacing: 14) {
-            Picker("Lernende", selection: $viewModel.learner) {
-                ForEach(Learner.allCases) { learner in
-                    Text(learner.rawValue).tag(learner)
-                }
-            }
-            .pickerStyle(.segmented)
+        VStack(alignment: .leading, spacing: 16) {
+            SectionTitle(title: "Einstellungen", systemImage: "slider.horizontal.3")
 
-            AdaptiveControlsStack(isCompact: isCompact) {
-                Picker("Richtung", selection: $viewModel.directionMode) {
-                    ForEach(DirectionMode.allCases) { mode in
-                        Text(isCompact ? mode.shortTitle : mode.rawValue).tag(mode)
+            VStack(spacing: 14) {
+                Picker("Lernende", selection: $viewModel.learner) {
+                    ForEach(Learner.allCases) { learner in
+                        Text(learner.rawValue).tag(learner)
+                    }
+                }
+                .pickerStyle(.segmented)
+
+                AdaptiveControlsStack(isCompact: isCompact) {
+                    Picker("Richtung", selection: $viewModel.directionMode) {
+                        ForEach(DirectionMode.allCases) { mode in
+                            Text(isCompact ? mode.shortTitle : mode.rawValue).tag(mode)
+                        }
+                    }
+
+                    Picker("Antwort", selection: $viewModel.answerMode) {
+                        ForEach(AnswerMode.allCases) { mode in
+                            Text(mode.rawValue).tag(mode)
+                        }
+                    }
+                }
+                .pickerStyle(.segmented)
+
+                AdaptiveControlsStack(isCompact: isCompact) {
+                    Picker("Level", selection: Binding(
+                        get: { viewModel.filter.level ?? -1 },
+                        set: { viewModel.filter.level = $0 == -1 ? nil : $0 }
+                    )) {
+                        Text("Alle Level").tag(-1)
+                        ForEach(0...5, id: \.self) { Text("Level \($0)").tag($0) }
+                    }
+
+                    Picker("Herkunft", selection: Binding(
+                        get: { viewModel.filter.source ?? "" },
+                        set: { viewModel.filter.source = $0.isEmpty ? nil : $0 }
+                    )) {
+                        Text("Alle Herkuenfte").tag("")
+                        ForEach(viewModel.sources, id: \.self) { Text($0).tag($0) }
+                    }
+
+                    Picker("Lektion", selection: Binding(
+                        get: { viewModel.filter.lesson ?? "" },
+                        set: { viewModel.filter.lesson = $0.isEmpty ? nil : $0 }
+                    )) {
+                        Text("Alle Lektionen").tag("")
+                        ForEach(viewModel.lessons, id: \.self) { Text($0).tag($0) }
                     }
                 }
 
-                Picker("Antwort", selection: $viewModel.answerMode) {
-                    ForEach(AnswerMode.allCases) { mode in
-                        Text(mode.rawValue).tag(mode)
+                AdaptiveControlsStack(isCompact: isCompact) {
+                    Picker("Woerter", selection: $viewModel.sessionSize) {
+                        ForEach(viewModel.sessionSizeOptions, id: \.self) { size in
+                            Text("\(size)").tag(size)
+                        }
                     }
+
+                    Button {
+                        viewModel.startSession()
+                    } label: {
+                        Label("Training starten", systemImage: "play.fill")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(NordicPalette.fjord)
                 }
             }
-            .pickerStyle(.segmented)
-
-            AdaptiveControlsStack(isCompact: isCompact) {
-                Picker("Level", selection: Binding(
-                    get: { viewModel.filter.level ?? -1 },
-                    set: { viewModel.filter.level = $0 == -1 ? nil : $0 }
-                )) {
-                    Text("Alle Level").tag(-1)
-                    ForEach(0...5, id: \.self) { Text("Level \($0)").tag($0) }
-                }
-
-                Picker("Herkunft", selection: Binding(
-                    get: { viewModel.filter.source ?? "" },
-                    set: { viewModel.filter.source = $0.isEmpty ? nil : $0 }
-                )) {
-                    Text("Alle Herkuenfte").tag("")
-                    ForEach(viewModel.sources, id: \.self) { Text($0).tag($0) }
-                }
-
-                Picker("Lektion", selection: Binding(
-                    get: { viewModel.filter.lesson ?? "" },
-                    set: { viewModel.filter.lesson = $0.isEmpty ? nil : $0 }
-                )) {
-                    Text("Alle Lektionen").tag("")
-                    ForEach(viewModel.lessons, id: \.self) { Text($0).tag($0) }
-                }
-            }
-
-            Button {
-                viewModel.startSession()
-            } label: {
-                Label("Training starten", systemImage: "play.fill")
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(NordicPalette.fjord)
         }
+        .sectionCard()
     }
 
     private var isCompact: Bool {
@@ -219,64 +232,67 @@ private struct ControlsView: View {
     }
 }
 
-private struct QuestionView: View {
+private struct TrainingView: View {
     @ObservedObject var viewModel: TrainerViewModel
 
     var body: some View {
-        VStack(spacing: 22) {
+        VStack(alignment: .leading, spacing: 18) {
+            SectionTitle(title: "Training", systemImage: "graduationcap")
+            ProgressSummaryView(viewModel: viewModel)
+
             if let question = viewModel.currentQuestion {
-                Text(question.direction == .germanToNorwegian ? "Deutsch -> Norwegisch" : "Norwegisch -> Deutsch")
-                    .font(.caption)
-                    .foregroundStyle(NordicPalette.stone)
+                VStack(spacing: 22) {
+                    Text(question.direction == .germanToNorwegian ? "Deutsch -> Norwegisch" : "Norwegisch -> Deutsch")
+                        .font(.caption)
+                        .foregroundStyle(NordicPalette.stone)
 
-                Text(question.prompt)
-                    .font(.system(size: 38, weight: .medium, design: .serif))
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(NordicPalette.ink)
-                    .minimumScaleFactor(0.65)
+                    Text(question.prompt)
+                        .font(.system(size: 38, weight: .medium, design: .serif))
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(NordicPalette.ink)
+                        .minimumScaleFactor(0.65)
 
-                if viewModel.answerMode == .choice {
-                    VStack(spacing: 10) {
-                        ForEach(question.options, id: \.self) { option in
-                            Button {
-                                withAnimation(.spring(response: 0.34, dampingFraction: 0.72)) {
-                                    viewModel.choose(option)
+                    if viewModel.answerMode == .choice {
+                        VStack(spacing: 10) {
+                            ForEach(question.options, id: \.self) { option in
+                                Button {
+                                    withAnimation(.spring(response: 0.34, dampingFraction: 0.72)) {
+                                        viewModel.choose(option)
+                                    }
+                                } label: {
+                                    Text(option)
+                                        .frame(maxWidth: .infinity)
+                                        .lineLimit(2)
+                                        .minimumScaleFactor(0.78)
                                 }
-                            } label: {
-                                Text(option)
-                                    .frame(maxWidth: .infinity)
-                                    .lineLimit(2)
-                                    .minimumScaleFactor(0.78)
+                                    .buttonStyle(.bordered)
+                                    .controlSize(.large)
                             }
-                                .buttonStyle(.bordered)
-                                .controlSize(.large)
                         }
-                    }
-                } else {
-                    TextField("Antwort", text: $viewModel.answerText)
-                        .textFieldStyle(.roundedBorder)
-                        .font(.title3)
-                        .onSubmit { viewModel.submitTypedAnswer() }
+                    } else {
+                        TextField("Antwort", text: $viewModel.answerText)
+                            .textFieldStyle(.roundedBorder)
+                            .font(.title3)
+                            .onSubmit { viewModel.submitTypedAnswer() }
 
-                    Button {
-                        withAnimation(.spring(response: 0.34, dampingFraction: 0.72)) {
-                            viewModel.submitTypedAnswer()
+                        Button {
+                            withAnimation(.spring(response: 0.34, dampingFraction: 0.72)) {
+                                viewModel.submitTypedAnswer()
+                            }
+                        } label: {
+                            Label("Antwort pruefen", systemImage: "return")
+                                .frame(maxWidth: .infinity)
                         }
-                    } label: {
-                        Label("Antwort pruefen", systemImage: "return")
-                            .frame(maxWidth: .infinity)
+                        .buttonStyle(.borderedProminent)
+                        .tint(NordicPalette.red)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(NordicPalette.red)
                 }
-
-                Text("\(viewModel.remaining) offen")
-                    .font(.footnote)
-                    .foregroundStyle(NordicPalette.stone)
+                .frame(maxWidth: .infinity)
             } else {
                 Text("Fertig")
                     .font(.largeTitle.weight(.semibold))
                     .foregroundStyle(NordicPalette.ink)
+                    .frame(maxWidth: .infinity)
             }
 
             if let feedback = viewModel.feedback {
@@ -288,8 +304,74 @@ private struct QuestionView: View {
             }
         }
         .animation(.easeOut(duration: 0.18), value: viewModel.feedback?.id)
-        .padding(28)
-        .background(.white.opacity(0.72))
+        .sectionCard()
+    }
+}
+
+private struct SectionTitle: View {
+    let title: String
+    let systemImage: String
+
+    var body: some View {
+        Label(title, systemImage: systemImage)
+            .font(.headline)
+            .foregroundStyle(NordicPalette.ink)
+    }
+}
+
+private struct ProgressSummaryView: View {
+    @ObservedObject var viewModel: TrainerViewModel
+
+    var body: some View {
+        VStack(spacing: 10) {
+            GeometryReader { proxy in
+                HStack(spacing: 0) {
+                    progressSegment(value: viewModel.correctCount, total: viewModel.sessionTotal, width: proxy.size.width, color: NordicPalette.fjord)
+                    progressSegment(value: viewModel.wrongCount, total: viewModel.sessionTotal, width: proxy.size.width, color: NordicPalette.red)
+                    progressSegment(value: viewModel.remaining, total: viewModel.sessionTotal, width: proxy.size.width, color: NordicPalette.stone.opacity(0.34))
+                }
+                .frame(width: proxy.size.width, height: 8)
+                .background(NordicPalette.stone.opacity(0.16))
+                .clipShape(Capsule())
+            }
+            .frame(height: 8)
+
+            HStack(spacing: 10) {
+                ProgressPill(title: "Richtig", value: viewModel.correctCount, color: NordicPalette.fjord)
+                ProgressPill(title: "Falsch", value: viewModel.wrongCount, color: NordicPalette.red)
+                ProgressPill(title: "Offen", value: viewModel.remaining, color: NordicPalette.stone)
+            }
+        }
+    }
+
+    private func progressSegment(value: Int, total: Int, width: CGFloat, color: Color) -> some View {
+        let segmentWidth = total > 0 ? width * CGFloat(max(value, 0)) / CGFloat(total) : 0
+        return Rectangle()
+            .fill(color)
+            .frame(width: segmentWidth)
+    }
+}
+
+private struct ProgressPill: View {
+    let title: String
+    let value: Int
+    let color: Color
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(color)
+                .frame(width: 7, height: 7)
+            Text(title)
+            Text("\(value)")
+                .fontWeight(.semibold)
+        }
+        .font(.caption)
+        .foregroundStyle(NordicPalette.ink)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .frame(maxWidth: .infinity)
+        .background(color.opacity(0.10))
         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 }
@@ -441,6 +523,13 @@ private enum NordicPalette {
 }
 
 private extension View {
+    func sectionCard() -> some View {
+        self
+            .padding(18)
+            .background(.white.opacity(0.72))
+            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+
     @ViewBuilder
     func platformContentFrame() -> some View {
         #if os(macOS)
