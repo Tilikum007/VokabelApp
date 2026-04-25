@@ -14,10 +14,10 @@ public struct ContentView: View {
                 VStack(spacing: 24) {
                     HeaderView()
                     LoginView(viewModel: viewModel, auth: viewModel.auth)
+                    SyncStatusView(store: viewModel.store)
                     ControlsView(viewModel: viewModel)
                     QuestionView(viewModel: viewModel)
                     Spacer(minLength: 0)
-                    SyncStatusView(store: viewModel.store)
                 }
                 .padding(24)
                 .frame(maxWidth: 760)
