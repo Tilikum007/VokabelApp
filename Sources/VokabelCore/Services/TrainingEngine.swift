@@ -10,7 +10,10 @@ public struct TrainingEngine {
     ) -> [VocabularyEntry] {
         entries.filter { entry in
             guard entry.isActive else { return false }
-            if let level = filter.level, entry.level(for: learner) != level { return false }
+            if let level = filter.level {
+                let entryLevel = entry.level(for: learner)
+                guard entryLevel >= Double(level), entryLevel <= Double(level) + 0.5 else { return false }
+            }
             if let source = filter.source, !source.isEmpty, entry.source != source { return false }
             if let lesson = filter.lesson, !lesson.isEmpty, entry.lesson != lesson { return false }
             return true
@@ -74,9 +77,9 @@ public struct TrainingEngine {
         return levenshtein(normalizedAnswer, normalizedExpected) <= 2 ? .almost : .wrong
     }
 
-    private func score(_ entry: VocabularyEntry, learner: Learner) -> Int {
+    private func score(_ entry: VocabularyEntry, learner: Learner) -> Double {
         let last = learner == .papa ? entry.lastPapa : entry.lastMama
-        let staleBonus = last.isEmpty ? -10 : 0
+        let staleBonus = last.isEmpty ? -10.0 : 0.0
         return entry.level(for: learner) * 10 + staleBonus
     }
 

@@ -64,9 +64,15 @@ public final class VocabularyStore: ObservableObject {
         }
     }
 
-    public func update(entryID: String, grade: AnswerGrade, learner: Learner, date: Date = Date()) {
+    public func update(
+        entryID: String,
+        grade: AnswerGrade,
+        learner: Learner,
+        correctLevelDelta: Double = 1,
+        date: Date = Date()
+    ) {
         guard let index = entries.firstIndex(where: { $0.id == entryID }) else { return }
-        entries[index].apply(grade, learner: learner, date: date)
+        entries[index].apply(grade, learner: learner, correctLevelDelta: correctLevelDelta, date: date)
         try? persist()
     }
 

@@ -36,8 +36,8 @@ public struct CSVCodec {
                 partOfSpeech: values.removeValue(forKey: "Wortart") ?? "",
                 source: values.removeValue(forKey: "Herkunft") ?? "",
                 lesson: values.removeValue(forKey: "Lektion") ?? "",
-                levelPapa: Int(values.removeValue(forKey: "Level_Papa") ?? "") ?? 0,
-                levelMama: Int(values.removeValue(forKey: "Level_Mama") ?? "") ?? 0,
+                levelPapa: Self.decodeLevel(values.removeValue(forKey: "Level_Papa") ?? ""),
+                levelMama: Self.decodeLevel(values.removeValue(forKey: "Level_Mama") ?? ""),
                 lastPapa: values.removeValue(forKey: "Zuletzt_Papa") ?? "",
                 lastMama: values.removeValue(forKey: "Zuletzt_Mama") ?? "",
                 lastResultPapa: values.removeValue(forKey: "Letztes_Ergebnis_Papa") ?? "",
@@ -58,7 +58,7 @@ public struct CSVCodec {
         let lines = [Self.header] + entries.map { entry in
             [
                 entry.id, entry.german, entry.norwegian, entry.partOfSpeech, entry.source, entry.lesson,
-                String(entry.levelPapa), String(entry.levelMama), entry.lastPapa, entry.lastMama,
+                Self.encodeLevel(entry.levelPapa), Self.encodeLevel(entry.levelMama), entry.lastPapa, entry.lastMama,
                 entry.lastResultPapa, entry.lastResultMama, String(entry.correctPapa), String(entry.wrongPapa),
                 String(entry.correctMama), String(entry.wrongMama), entry.exampleNO, entry.exampleDE,
                 entry.note, entry.active.isEmpty ? "ja" : entry.active
@@ -124,5 +124,13 @@ public struct CSVCodec {
         let requiresQuotes = value.contains(",") || value.contains("\"") || value.contains("\n") || value.contains("\r")
         let escaped = value.replacingOccurrences(of: "\"", with: "\"\"")
         return requiresQuotes ? "\"\(escaped)\"" : escaped
+    }
+
+    private static func decodeLevel(_ value: String) -> Double {
+        Double(value.replacingOccurrences(of: ",", with: ".")) ?? 0
+    }
+
+    private static func encodeLevel(_ value: Double) -> String {
+        value.rounded() == value ? String(Int(value)) : String(value)
     }
 }

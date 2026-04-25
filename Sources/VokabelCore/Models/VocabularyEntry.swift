@@ -20,6 +20,21 @@ public enum QuestionDirection: String {
     case norwegianToGerman
 }
 
+public enum DirectionMode: String, CaseIterable, Identifiable {
+    case germanToNorwegian = "Deutsch -> Norwegisch"
+    case norwegianToGerman = "Norwegisch -> Deutsch"
+    case alternating = "Abwechselnd"
+
+    public var id: String { rawValue }
+}
+
+public enum AnswerMode: String, CaseIterable, Identifiable {
+    case typed = "Eingeben"
+    case choice = "Auswahl"
+
+    public var id: String { rawValue }
+}
+
 public struct VocabularyEntry: Identifiable, Equatable {
     public var id: String
     public var german: String
@@ -27,8 +42,8 @@ public struct VocabularyEntry: Identifiable, Equatable {
     public var partOfSpeech: String
     public var source: String
     public var lesson: String
-    public var levelPapa: Int
-    public var levelMama: Int
+    public var levelPapa: Double
+    public var levelMama: Double
     public var lastPapa: String
     public var lastMama: String
     public var lastResultPapa: String
@@ -49,8 +64,8 @@ public struct VocabularyEntry: Identifiable, Equatable {
         partOfSpeech: String,
         source: String,
         lesson: String,
-        levelPapa: Int,
-        levelMama: Int,
+        levelPapa: Double,
+        levelMama: Double,
         lastPapa: String,
         lastMama: String,
         lastResultPapa: String,
@@ -90,18 +105,23 @@ public struct VocabularyEntry: Identifiable, Equatable {
         active.trimmingCharacters(in: .whitespacesAndNewlines).localizedCaseInsensitiveCompare("ja") == .orderedSame
     }
 
-    public func level(for learner: Learner) -> Int {
+    public func level(for learner: Learner) -> Double {
         learner == .papa ? levelPapa : levelMama
     }
 
-    public mutating func apply(_ grade: AnswerGrade, learner: Learner, date: Date = Date()) {
+    public mutating func apply(
+        _ grade: AnswerGrade,
+        learner: Learner,
+        correctLevelDelta: Double = 1,
+        date: Date = Date()
+    ) {
         let formatter = ISO8601DateFormatter()
         let stamp = formatter.string(from: date)
-        let delta: Int
+        let delta: Double
 
         switch grade {
         case .correct:
-            delta = 1
+            delta = correctLevelDelta
         case .almost:
             delta = 0
         case .wrong:

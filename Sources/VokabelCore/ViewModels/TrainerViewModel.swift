@@ -6,9 +6,11 @@ public final class TrainerViewModel: ObservableObject {
     @Published public var filter = TrainingFilter()
     @Published public var currentQuestion: TrainingQuestion?
     @Published public var answerText = ""
-    @Published public var feedback = ""
+    @Published public var feedback: FeedbackState?
     @Published public var sessionSize = 10
     @Published public var remaining = 0
+    @Published public var directionMode: DirectionMode = .germanToNorwegian
+    @Published public var answerMode: AnswerMode
 
     public let store: VocabularyStore
     public let auth: AuthCoordinator
@@ -20,6 +22,7 @@ public final class TrainerViewModel: ObservableObject {
     public init(store: VocabularyStore, auth: AuthCoordinator = AuthCoordinator()) {
         self.store = store
         self.auth = auth
+        self.answerMode = TrainerViewModel.defaultAnswerMode
     }
 
     public var sources: [String] {
@@ -36,7 +39,7 @@ public final class TrainerViewModel: ObservableObject {
         if let accessToken = auth.accessToken {
             await store.syncFromDrive(accessToken: accessToken)
         }
-        startSession(singleQuestion: Self.usesChoiceMode)
+        startSession()
     }
 
     public func syncNow() async {
@@ -68,16 +71,17 @@ public final class TrainerViewModel: ObservableObject {
         _ = auth.handleOpenURL(url)
     }
 
-    public func startSession(singleQuestion: Bool = false) {
+    public func startSession() {
         session = engine.makeSession(
             from: store.entries,
             learner: learner,
             filter: filter,
-            count: singleQuestion ? 1 : sessionSize,
+            count: sessionSize,
             lastEntryID: lastEntryID
         )
         remaining = session.count
-        feedback = ""
+        feedback = nil
+        directionIndex = 0
         nextQuestion()
     }
 
@@ -93,8 +97,14 @@ public final class TrainerViewModel: ObservableObject {
 
     private func submit(grade: AnswerGrade) {
         guard let question = currentQuestion else { return }
-        store.update(entryID: question.entryID, grade: grade, learner: learner)
-        feedback = "\(grade.rawValue.capitalized): \(question.expectedAnswer)"
+        let correctLevelDelta = answerMode == .choice ? 0.5 : 1
+        store.update(
+            entryID: question.entryID,
+            grade: grade,
+            learner: learner,
+            correctLevelDelta: correctLevelDelta
+        )
+        feedback = FeedbackState(grade: grade, expectedAnswer: question.expectedAnswer)
         lastEntryID = question.entryID
         nextQuestion()
     }
@@ -109,22 +119,67 @@ public final class TrainerViewModel: ObservableObject {
 
         let entry = session.removeFirst()
         remaining = session.count + 1
-        let direction: QuestionDirection = directionIndex.isMultiple(of: 2) ? .germanToNorwegian : .norwegianToGerman
-        directionIndex += 1
+        let direction = nextDirection()
         currentQuestion = engine.makeQuestion(
             entry: entry,
             direction: direction,
             allEntries: store.entries,
-            optionsCount: Self.usesChoiceMode ? 5 : 0
+            optionsCount: answerMode == .choice ? 5 : 0
         )
     }
 
-    public static var usesChoiceMode: Bool {
+    private func nextDirection() -> QuestionDirection {
+        switch directionMode {
+        case .germanToNorwegian:
+            return .germanToNorwegian
+        case .norwegianToGerman:
+            return .norwegianToGerman
+        case .alternating:
+            let direction: QuestionDirection = directionIndex.isMultiple(of: 2) ? .germanToNorwegian : .norwegianToGerman
+            directionIndex += 1
+            return direction
+        }
+    }
+
+    public static var defaultAnswerMode: AnswerMode {
         #if os(iOS)
-        true
+        .choice
         #else
-        false
+        .typed
         #endif
+    }
+}
+
+public struct FeedbackState: Equatable, Identifiable {
+    public let id = UUID()
+    public let grade: AnswerGrade
+    public let expectedAnswer: String
+
+    public init(grade: AnswerGrade, expectedAnswer: String) {
+        self.grade = grade
+        self.expectedAnswer = expectedAnswer
+    }
+
+    public var title: String {
+        switch grade {
+        case .correct:
+            "Richtig"
+        case .almost:
+            "Fast richtig"
+        case .wrong:
+            "Falsch"
+        }
+    }
+
+    public var emoji: String {
+        switch grade {
+        case .correct:
+            "✅"
+        case .almost:
+            "✨"
+        case .wrong:
+            "❄️"
+        }
     }
 }
 

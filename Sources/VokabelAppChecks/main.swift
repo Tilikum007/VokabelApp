@@ -42,4 +42,11 @@ check(entry.correctPapa == 1, "Papa correct counter should increment")
 check(entry.levelMama == 0, "Mama level should be floored at 0")
 check(entry.wrongMama == 1, "Mama wrong counter should increment")
 
+entry.levelPapa = 1
+entry.apply(.correct, learner: .papa, correctLevelDelta: 0.5)
+check(entry.levelPapa == 1.5, "Choice mode should increase level by half a point")
+
+let filtered = engine.eligibleEntries(from: [entry], learner: .papa, filter: TrainingFilter(level: 1))
+check(filtered.count == 1, "Level 1 filter should include level 1.5 entries")
+
 print("VokabelApp checks passed")

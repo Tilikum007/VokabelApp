@@ -119,6 +119,21 @@ private struct ControlsView: View {
             .pickerStyle(.segmented)
 
             HStack {
+                Picker("Richtung", selection: $viewModel.directionMode) {
+                    ForEach(DirectionMode.allCases) { mode in
+                        Text(mode.rawValue).tag(mode)
+                    }
+                }
+
+                Picker("Antwort", selection: $viewModel.answerMode) {
+                    ForEach(AnswerMode.allCases) { mode in
+                        Text(mode.rawValue).tag(mode)
+                    }
+                }
+            }
+            .pickerStyle(.segmented)
+
+            HStack {
                 Picker("Level", selection: Binding(
                     get: { viewModel.filter.level ?? -1 },
                     set: { viewModel.filter.level = $0 == -1 ? nil : $0 }
@@ -145,7 +160,7 @@ private struct ControlsView: View {
             }
 
             Button {
-                viewModel.startSession(singleQuestion: TrainerViewModel.usesChoiceMode)
+                viewModel.startSession()
             } label: {
                 Label("Training starten", systemImage: "play.fill")
                     .frame(maxWidth: .infinity)
@@ -172,13 +187,19 @@ private struct QuestionView: View {
                     .foregroundStyle(NordicPalette.ink)
                     .minimumScaleFactor(0.65)
 
-                if TrainerViewModel.usesChoiceMode {
+                if viewModel.answerMode == .choice {
                     VStack(spacing: 10) {
                         ForEach(question.options, id: \.self) { option in
-                            Button(option) { viewModel.choose(option) }
+                            Button {
+                                withAnimation(.spring(response: 0.34, dampingFraction: 0.72)) {
+                                    viewModel.choose(option)
+                                }
+                            } label: {
+                                Text(option)
+                                    .frame(maxWidth: .infinity)
+                            }
                                 .buttonStyle(.bordered)
                                 .controlSize(.large)
-                                .frame(maxWidth: .infinity)
                         }
                     }
                 } else {
@@ -188,7 +209,9 @@ private struct QuestionView: View {
                         .onSubmit { viewModel.submitTypedAnswer() }
 
                     Button {
-                        viewModel.submitTypedAnswer()
+                        withAnimation(.spring(response: 0.34, dampingFraction: 0.72)) {
+                            viewModel.submitTypedAnswer()
+                        }
                     } label: {
                         Label("Antwort pruefen", systemImage: "return")
                             .frame(maxWidth: .infinity)
@@ -206,15 +229,54 @@ private struct QuestionView: View {
                     .foregroundStyle(NordicPalette.ink)
             }
 
-            if !viewModel.feedback.isEmpty {
-                Text(viewModel.feedback)
-                    .font(.callout)
-                    .foregroundStyle(NordicPalette.fjord)
+            if let feedback = viewModel.feedback {
+                FeedbackView(feedback: feedback)
+                    .transition(.scale(scale: 0.82).combined(with: .opacity))
             }
         }
+        .animation(.spring(response: 0.34, dampingFraction: 0.72), value: viewModel.feedback?.id)
         .padding(28)
         .background(.white.opacity(0.72))
         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+}
+
+private struct FeedbackView: View {
+    let feedback: FeedbackState
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Text(feedback.emoji)
+                .font(.title2)
+                .scaleEffect(1.08)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(feedback.title)
+                    .font(.headline)
+                Text("Loesung: \(feedback.expectedAnswer)")
+                    .font(.callout)
+            }
+            Spacer(minLength: 0)
+        }
+        .foregroundStyle(color)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(color.opacity(0.10))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(color.opacity(0.22), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+
+    private var color: Color {
+        switch feedback.grade {
+        case .correct:
+            NordicPalette.fjord
+        case .almost:
+            NordicPalette.gold
+        case .wrong:
+            NordicPalette.red
+        }
     }
 }
 
@@ -237,4 +299,5 @@ private enum NordicPalette {
     static let stone = Color(red: 0.42, green: 0.47, blue: 0.50)
     static let fjord = Color(red: 0.05, green: 0.32, blue: 0.42)
     static let red = Color(red: 0.73, green: 0.08, blue: 0.13)
+    static let gold = Color(red: 0.58, green: 0.39, blue: 0.08)
 }
