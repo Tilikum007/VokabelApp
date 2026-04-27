@@ -13,6 +13,10 @@ public struct CSVCodec {
         "Richtig_Papa", "Falsch_Papa", "Richtig_Mama", "Falsch_Mama",
         "Beispielsatz_NO", "Beispielsatz_DE", "Notiz", "Aktiv"
     ]
+    public static let catalogHeader = [
+        "ID", "Deutsch", "Norwegisch", "Wortart", "Herkunft", "Lektion",
+        "Beispielsatz_NO", "Beispielsatz_DE", "Notiz", "Aktiv"
+    ]
 
     public init() {}
 
@@ -57,11 +61,30 @@ public struct CSVCodec {
     public func encode(_ entries: [VocabularyEntry]) -> String {
         let lines = [Self.header] + entries.map { entry in
             [
-                entry.id, entry.german, entry.norwegian, entry.partOfSpeech, entry.source, entry.lesson,
+                entry.id, entry.german, entry.norwegian, entry.partOfSpeech, entry.normalizedSource, entry.normalizedLesson,
                 Self.encodeLevel(entry.levelPapa), Self.encodeLevel(entry.levelMama), entry.lastPapa, entry.lastMama,
                 entry.lastResultPapa, entry.lastResultMama, String(entry.correctPapa), String(entry.wrongPapa),
                 String(entry.correctMama), String(entry.wrongMama), entry.exampleNO, entry.exampleDE,
                 entry.note, entry.active.isEmpty ? "ja" : entry.active
+            ]
+        }
+
+        return lines.map { $0.map(escape).joined(separator: ",") }.joined(separator: "\n") + "\n"
+    }
+
+    public func encodeCatalog(_ entries: [VocabularyEntry]) -> String {
+        let lines = [Self.catalogHeader] + entries.map { entry in
+            [
+                entry.id,
+                entry.german,
+                entry.norwegian,
+                entry.partOfSpeech,
+                entry.normalizedSource,
+                entry.normalizedLesson,
+                entry.exampleNO,
+                entry.exampleDE,
+                entry.note,
+                entry.active.isEmpty ? "ja" : entry.active
             ]
         }
 
@@ -73,43 +96,50 @@ public struct CSVCodec {
         var row: [String] = []
         var field = ""
         var inQuotes = false
-        var iterator = Array(text).makeIterator()
+        let scalars = Array(text.unicodeScalars)
+        var index = 0
 
-        while let character = iterator.next() {
-            if character == "\"" {
-                if inQuotes, let next = iterator.next() {
-                    if next == "\"" {
-                        field.append("\"")
-                    } else {
-                        inQuotes = false
-                        if next == "," {
-                            row.append(field)
-                            field = ""
-                        } else if next == "\n" || next == "\r" {
-                            row.append(field)
-                            rows.append(row)
-                            row = []
-                            field = ""
-                        } else {
-                            field.append(next)
-                        }
-                    }
-                } else {
-                    inQuotes.toggle()
+        while index < scalars.count {
+            let scalar = scalars[index]
+
+            if scalar == "\"" {
+                let nextIndex = index + 1
+                if inQuotes, nextIndex < scalars.count, scalars[nextIndex] == "\"" {
+                    field.append("\"")
+                    index += 2
+                    continue
                 }
-            } else if character == ",", !inQuotes {
+
+                inQuotes.toggle()
+                index += 1
+                continue
+            }
+
+            if scalar == ",", !inQuotes {
                 row.append(field)
                 field = ""
-            } else if (character == "\n" || character == "\r"), !inQuotes {
+                index += 1
+                continue
+            }
+
+            if !inQuotes && (scalar == "\r" || scalar == "\n") {
                 if !field.isEmpty || !row.isEmpty {
                     row.append(field)
                     rows.append(row)
                     row = []
                     field = ""
                 }
-            } else {
-                field.append(character)
+
+                if scalar == "\r", index + 1 < scalars.count, scalars[index + 1] == "\n" {
+                    index += 2
+                } else {
+                    index += 1
+                }
+                continue
             }
+
+            field.unicodeScalars.append(scalar)
+            index += 1
         }
 
         if !field.isEmpty || !row.isEmpty {

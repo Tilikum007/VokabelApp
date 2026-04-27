@@ -8,6 +8,8 @@ settings:
   base:
     SWIFT_VERSION: "6.0"
     DEVELOPMENT_TEAM: Y3B24T9MUD
+    MARKETING_VERSION: "0.2.0"
+    CURRENT_PROJECT_VERSION: "2"
 packages:
   GoogleSignIn:
     url: https://github.com/google/GoogleSignIn-iOS

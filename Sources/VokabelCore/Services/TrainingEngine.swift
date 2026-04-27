@@ -14,7 +14,7 @@ public struct TrainingEngine {
                 let entryLevel = entry.level(for: learner)
                 guard entryLevel >= Double(level), entryLevel <= Double(level) + 0.5 else { return false }
             }
-            if let source = filter.source, !source.isEmpty, entry.source != source { return false }
+            if let source = filter.source, !source.isEmpty, !entry.sourceTokens.contains(source) { return false }
             if let lesson = filter.lesson, !lesson.isEmpty, entry.lesson != lesson { return false }
             return true
         }

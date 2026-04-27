@@ -1,13 +1,13 @@
 import Foundation
 
-public enum Learner: String, CaseIterable, Identifiable {
+public enum Learner: String, CaseIterable, Identifiable, Codable, Hashable, Sendable {
     case papa = "Papa"
     case mama = "Mama"
 
     public var id: String { rawValue }
 }
 
-public enum AnswerGrade: String, CaseIterable, Identifiable {
+public enum AnswerGrade: String, CaseIterable, Identifiable, Codable, Hashable, Sendable {
     case correct = "richtig"
     case almost = "fast richtig"
     case wrong = "falsch"
@@ -114,6 +114,51 @@ public struct VocabularyEntry: Identifiable, Equatable {
 
     public var isActive: Bool {
         active.trimmingCharacters(in: .whitespacesAndNewlines).localizedCaseInsensitiveCompare("ja") == .orderedSame
+    }
+
+    public var sourceTokens: [String] {
+        source
+            .split(separator: ";")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+    }
+
+    public var normalizedSource: String {
+        var seen = Set<String>()
+        let uniqueTokens = sourceTokens.filter { seen.insert($0).inserted }
+        if uniqueTokens.isEmpty {
+            return source.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        return uniqueTokens.joined(separator: "; ")
+    }
+
+    public var normalizedLesson: String {
+        lesson.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    public var strippingProgress: VocabularyEntry {
+        VocabularyEntry(
+            id: id,
+            german: german,
+            norwegian: norwegian,
+            partOfSpeech: partOfSpeech,
+            source: source,
+            lesson: lesson,
+            levelPapa: 0,
+            levelMama: 0,
+            lastPapa: "",
+            lastMama: "",
+            lastResultPapa: "",
+            lastResultMama: "",
+            correctPapa: 0,
+            wrongPapa: 0,
+            correctMama: 0,
+            wrongMama: 0,
+            exampleNO: exampleNO,
+            exampleDE: exampleDE,
+            note: note,
+            active: active
+        )
     }
 
     public func level(for learner: Learner) -> Double {

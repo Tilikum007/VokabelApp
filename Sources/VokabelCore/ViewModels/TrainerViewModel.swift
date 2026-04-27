@@ -1,9 +1,19 @@
 import Foundation
+import Combine
 
 @MainActor
 public final class TrainerViewModel: ObservableObject {
-    @Published public var learner: Learner = .papa
-    @Published public var filter = TrainingFilter()
+    @Published public var learner: Learner = .papa {
+        didSet {
+            normalizeFilter(for: store.entries)
+        }
+    }
+    @Published public var filter = TrainingFilter() {
+        didSet {
+            guard !isNormalizingFilter else { return }
+            normalizeFilter(for: store.entries)
+        }
+    }
     @Published public var currentQuestion: TrainingQuestion?
     @Published public var answerText = ""
     @Published public var feedback: FeedbackState?
@@ -14,6 +24,7 @@ public final class TrainerViewModel: ObservableObject {
     @Published public var remaining = 0
     @Published public var directionMode: DirectionMode = .germanToNorwegian
     @Published public var answerMode: AnswerMode
+    @Published public private(set) var sessionMessage: String?
 
     public let store: VocabularyStore
     public let auth: AuthCoordinator
@@ -21,19 +32,42 @@ public final class TrainerViewModel: ObservableObject {
     private var session: [VocabularyEntry] = []
     private var directionIndex = 0
     private var lastEntryID: String?
+    private var cancellables = Set<AnyCancellable>()
+    private var isNormalizingFilter = false
 
     public init(store: VocabularyStore, auth: AuthCoordinator = AuthCoordinator()) {
         self.store = store
         self.auth = auth
         self.answerMode = TrainerViewModel.defaultAnswerMode
+
+        store.$entries
+            .receive(on: RunLoop.main)
+            .sink { [weak self] entries in
+                guard let self else { return }
+                self.normalizeFilter(for: entries)
+                self.objectWillChange.send()
+            }
+            .store(in: &cancellables)
     }
 
     public var sources: [String] {
-        store.entries.map(\.source).filter { !$0.isEmpty }.uniqued().sorted()
+        store.entries
+            .flatMap(\.sourceTokens)
+            .filter { !$0.isEmpty }
+            .uniqued()
+            .sorted()
     }
 
     public var lessons: [String] {
-        store.entries.map(\.lesson).filter { !$0.isEmpty }.uniqued().sorted()
+        entriesMatching(source: filter.source)
+            .map(\.lesson)
+            .filter { !$0.isEmpty }
+            .uniqued()
+            .sorted()
+    }
+
+    public var levels: [Int] {
+        levelBuckets(for: entriesMatching(source: filter.source, lesson: filter.lesson))
     }
 
     public var sessionSizeOptions: [Int] {
@@ -43,9 +77,6 @@ public final class TrainerViewModel: ObservableObject {
     public func load() async {
         await auth.restoreSavedLogin()
         await store.loadBundledSampleIfNeeded()
-        if let accessToken = auth.accessToken {
-            await store.syncFromDrive(accessToken: accessToken)
-        }
         startSession()
     }
 
@@ -65,6 +96,15 @@ public final class TrainerViewModel: ObservableObject {
         }
 
         await store.uploadToDrive(accessToken: accessToken)
+    }
+
+    public func checkVocabularyUpdates() async {
+        guard let accessToken = auth.accessToken else {
+            store.setSyncMessage("Bitte zuerst mit Google anmelden")
+            return
+        }
+
+        await store.checkForVocabularyUpdates(accessToken: accessToken)
     }
 
     public func signInAndSync() async {
@@ -92,6 +132,7 @@ public final class TrainerViewModel: ObservableObject {
         remaining = session.count
         feedback = nil
         directionIndex = 0
+        sessionMessage = sessionMessage(for: session.count)
         nextQuestion()
     }
 
@@ -163,6 +204,66 @@ public final class TrainerViewModel: ObservableObject {
         .typed
         #endif
     }
+
+    private func normalizeFilter(for entries: [VocabularyEntry]) {
+        var normalizedFilter = filter
+        let availableSources = Set(entries.filter(\.isActive).flatMap(\.sourceTokens).filter { !$0.isEmpty })
+
+        if let source = normalizedFilter.source, !availableSources.contains(source) {
+            normalizedFilter.source = nil
+        }
+
+        let availableLessons = Set(
+            entriesMatching(source: normalizedFilter.source, in: entries)
+                .map(\.lesson)
+                .filter { !$0.isEmpty }
+        )
+
+        if let lesson = normalizedFilter.lesson, !availableLessons.contains(lesson) {
+            normalizedFilter.lesson = nil
+        }
+
+        let availableLevels = Set(
+            levelBuckets(for: entriesMatching(source: normalizedFilter.source, lesson: normalizedFilter.lesson, in: entries))
+        )
+
+        if let level = normalizedFilter.level, !availableLevels.contains(level) {
+            normalizedFilter.level = nil
+        }
+
+        guard normalizedFilter != filter else { return }
+        isNormalizingFilter = true
+        filter = normalizedFilter
+        isNormalizingFilter = false
+    }
+
+    private func entriesMatching(source: String? = nil, lesson: String? = nil, in entries: [VocabularyEntry]? = nil) -> [VocabularyEntry] {
+        (entries ?? store.entries).filter { entry in
+            guard entry.isActive else { return false }
+            if let source, !entry.sourceTokens.contains(source) { return false }
+            if let lesson, entry.lesson != lesson { return false }
+            return true
+        }
+    }
+
+    private func levelBuckets(for entries: [VocabularyEntry]) -> [Int] {
+        entries
+            .filter(\.isActive)
+            .map { Int($0.level(for: learner).rounded(.down)) }
+            .uniqued()
+            .sorted()
+    }
+
+    private func sessionMessage(for count: Int) -> String? {
+        guard count == 0 else { return nil }
+        guard !store.entries.isEmpty else { return "Keine Vokabeln geladen." }
+
+        if filter.source != nil || filter.lesson != nil || filter.level != nil {
+            return "Keine passenden Vokabeln fuer die aktuellen Filter."
+        }
+
+        return "Keine aktiven Vokabeln verfuegbar."
+    }
 }
 
 public struct FeedbackState: Equatable, Identifiable {
@@ -194,6 +295,28 @@ public struct FeedbackState: Equatable, Identifiable {
             "✨"
         case .wrong:
             "❄️"
+        }
+    }
+
+    public var characterImageName: String {
+        switch grade {
+        case .correct:
+            "cheer"
+        case .almost:
+            "wave"
+        case .wrong:
+            "down"
+        }
+    }
+
+    public var characterTitle: String {
+        switch grade {
+        case .correct:
+            "Bra!"
+        case .almost:
+            "Nesten!"
+        case .wrong:
+            "Proev igjen!"
         }
     }
 }

@@ -1,8 +1,15 @@
 import SwiftUI
+#if os(iOS)
+import UIKit
+#elseif os(macOS)
+import AppKit
+#endif
 
 public struct ContentView: View {
     @ObservedObject var viewModel: TrainerViewModel
     @State private var showsSettings = false
+    @State private var showsWelcomePopup = false
+    @State private var didPresentWelcome = false
 
     public init(viewModel: TrainerViewModel) {
         self.viewModel = viewModel
@@ -27,8 +34,25 @@ public struct ContentView: View {
                 }
             }
         }
+        .overlay {
+            if showsWelcomePopup {
+                CharacterPopup(imageName: "wave", title: "Hei, god dag!")
+                    .transition(.scale(scale: 0.86).combined(with: .opacity))
+            }
+        }
         .platformContentFrame()
-        .task { await viewModel.load() }
+        .task {
+            await viewModel.load()
+            guard !didPresentWelcome else { return }
+            didPresentWelcome = true
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                showsWelcomePopup = true
+            }
+            try? await Task.sleep(for: .seconds(1.8))
+            withAnimation(.easeOut(duration: 0.22)) {
+                showsWelcomePopup = false
+            }
+        }
     }
 }
 
@@ -37,15 +61,16 @@ private struct TrainingScreen: View {
     let showSettings: () -> Void
 
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 14) {
             TopBar(
                 title: "Norsk",
                 subtitle: "Vokabeltraining"
             ) {
                 Button(action: showSettings) {
-                    IconActionLabel(title: "Einstellungen", systemImage: "gearshape")
+                    IconOnlyActionLabel(title: "Einstellungen", systemImage: "gearshape")
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Einstellungen")
             }
 
             SessionControlsView(viewModel: viewModel)
@@ -61,7 +86,7 @@ private struct SettingsScreen: View {
 
     var body: some View {
         VStack(spacing: 20) {
-            TopBar(
+            TrainingTitleBar(
                 title: "Einstellungen",
                 subtitle: "Sync und Trainingsfilter"
             ) {
@@ -80,6 +105,45 @@ private struct SettingsScreen: View {
 }
 
 private struct TopBar<Action: View>: View {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    let title: String
+    let subtitle: String
+    let action: Action
+
+    init(title: String, subtitle: String, @ViewBuilder action: () -> Action) {
+        self.title = title
+        self.subtitle = subtitle
+        self.action = action()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .top, spacing: 12) {
+                titleLine
+                Spacer(minLength: 8)
+                action
+            }
+            Text(subtitle)
+                .font(.headline)
+                .foregroundStyle(NordicPalette.stone)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var titleLine: some View {
+        HStack(spacing: 10) {
+            Text(title)
+                .font(.system(size: horizontalSizeClass == .compact ? 48 : 40, weight: .semibold, design: .serif))
+                .foregroundStyle(NordicPalette.ink)
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
+            NorwegianFlag()
+        }
+    }
+}
+
+private struct TrainingTitleBar<Action: View>: View {
     let title: String
     let subtitle: String
     let action: Action
@@ -199,6 +263,14 @@ private struct LoginView: View {
         .buttonStyle(.plain)
         .disabled(auth.isSigningIn || viewModel.store.isSyncing)
 
+        Button {
+            Task { await viewModel.checkVocabularyUpdates() }
+        } label: {
+            DriveActionLabel(title: "Vokabel-Update suchen", systemImage: "text.badge.plus", isCompact: isCompact)
+        }
+        .buttonStyle(.plain)
+        .disabled(auth.isSigningIn || viewModel.store.isSyncing)
+
         if auth.isSignedIn {
             Button(role: .destructive) {
                 auth.signOut()
@@ -252,11 +324,30 @@ private struct IconActionLabel: View {
     }
 }
 
+private struct IconOnlyActionLabel: View {
+    let title: String
+    let systemImage: String
+
+    var body: some View {
+        Image(systemName: systemImage)
+            .font(.title3.weight(.semibold))
+            .foregroundStyle(NordicPalette.flagBlue)
+            .frame(width: 48, height: 48)
+            .background(NordicPalette.card)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .stroke(NordicPalette.flagBlue, lineWidth: 1.4)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .accessibilityLabel(title)
+    }
+}
+
 private struct SessionControlsView: View {
     @ObservedObject var viewModel: TrainerViewModel
 
     var body: some View {
-        HStack(alignment: .bottom, spacing: 12) {
+        HStack(alignment: .bottom, spacing: 10) {
             MenuSelectField(title: "Woerter", value: "\(viewModel.sessionSize) Woerter") {
                 ForEach(viewModel.sessionSizeOptions, id: \.self) { size in
                     Button("\(size) Woerter") {
@@ -276,7 +367,10 @@ private struct SessionControlsView: View {
             .tint(NordicPalette.flagBlue)
             .frame(maxWidth: .infinity)
         }
-        .sectionCard()
+        .padding(12)
+        .background(NordicPalette.card)
+        .cardStroke()
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 }
 
@@ -324,18 +418,26 @@ private struct SettingsView: View {
                 }
 
                 VStack(spacing: 10) {
-                    MenuSelectField(title: "Level", value: levelTitle) {
+                    MenuSelectField(
+                        title: "Level",
+                        value: viewModel.filter.level.map { "Level \($0)" } ?? (viewModel.levels.isEmpty ? "Keine Level" : "Alle Level"),
+                        isEnabled: !viewModel.levels.isEmpty
+                    ) {
                         Button("Alle Level") {
                             viewModel.filter.level = nil
                         }
-                        ForEach(0...5, id: \.self) { level in
+                        ForEach(viewModel.levels, id: \.self) { level in
                             Button("Level \(level)") {
                                 viewModel.filter.level = level
                             }
                         }
                     }
 
-                    MenuSelectField(title: "Herkunft", value: viewModel.filter.source ?? "Alle Herkuenfte") {
+                    MenuSelectField(
+                        title: "Herkunft",
+                        value: viewModel.filter.source ?? (viewModel.sources.isEmpty ? "Keine Herkuenfte" : "Alle Herkuenfte"),
+                        isEnabled: !viewModel.sources.isEmpty
+                    ) {
                         Button("Alle Herkuenfte") {
                             viewModel.filter.source = nil
                         }
@@ -346,7 +448,11 @@ private struct SettingsView: View {
                         }
                     }
 
-                    MenuSelectField(title: "Lektion", value: viewModel.filter.lesson ?? "Alle Lektionen") {
+                    MenuSelectField(
+                        title: "Lektion",
+                        value: viewModel.filter.lesson ?? (viewModel.lessons.isEmpty ? "Keine Lektionen" : "Alle Lektionen"),
+                        isEnabled: !viewModel.lessons.isEmpty
+                    ) {
                         Button("Alle Lektionen") {
                             viewModel.filter.lesson = nil
                         }
@@ -362,13 +468,6 @@ private struct SettingsView: View {
         .sectionCard()
     }
 
-    private var levelTitle: String {
-        if let level = viewModel.filter.level {
-            "Level \(level)"
-        } else {
-            "Alle Level"
-        }
-    }
 }
 
 private struct OptionGroup<Content: View>: View {
@@ -421,11 +520,13 @@ private struct OptionChip: View {
 private struct MenuSelectField<Content: View>: View {
     let title: String
     let value: String
+    let isEnabled: Bool
     let content: Content
 
-    init(title: String, value: String, @ViewBuilder content: () -> Content) {
+    init(title: String, value: String, isEnabled: Bool = true, @ViewBuilder content: () -> Content) {
         self.title = title
         self.value = value
+        self.isEnabled = isEnabled
         self.content = content()
     }
 
@@ -446,38 +547,40 @@ private struct MenuSelectField<Content: View>: View {
                         .font(.caption.weight(.bold))
                 }
                 .font(.callout.weight(.semibold))
-                .foregroundStyle(NordicPalette.flagBlue)
+                .foregroundStyle(isEnabled ? NordicPalette.flagBlue : NordicPalette.stone)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(NordicPalette.card)
                 .overlay(
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(NordicPalette.flagBlue, lineWidth: 1.4)
+                        .stroke(isEnabled ? NordicPalette.flagBlue : NordicPalette.border, lineWidth: 1.4)
                 )
                 .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
             }
             .buttonStyle(.plain)
+            .disabled(!isEnabled)
         }
     }
 }
 
 private struct TrainingView: View {
     @ObservedObject var viewModel: TrainerViewModel
+    @State private var characterFeedback: FeedbackState?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
+        VStack(alignment: .leading, spacing: 12) {
             SectionTitle(title: "Training", systemImage: "graduationcap")
             ProgressSummaryView(viewModel: viewModel)
 
             if let question = viewModel.currentQuestion {
-                VStack(spacing: 22) {
+                VStack(spacing: 16) {
                     Text(question.direction == .germanToNorwegian ? "Deutsch -> Norwegisch" : "Norwegisch -> Deutsch")
                         .font(.caption)
                         .foregroundStyle(NordicPalette.stone)
 
                     Text(question.prompt)
-                        .font(.system(size: 38, weight: .medium, design: .serif))
+                        .font(.system(size: 34, weight: .medium, design: .serif))
                         .multilineTextAlignment(.center)
                         .foregroundStyle(NordicPalette.ink)
                         .minimumScaleFactor(0.65)
@@ -515,10 +618,18 @@ private struct TrainingView: View {
                 }
                 .frame(maxWidth: .infinity)
             } else {
-                Text("Fertig")
-                    .font(.largeTitle.weight(.semibold))
-                    .foregroundStyle(NordicPalette.ink)
-                    .frame(maxWidth: .infinity)
+                VStack(spacing: 10) {
+                    Text(viewModel.sessionTotal == 0 ? "Keine Session" : "Fertig")
+                        .font(.largeTitle.weight(.semibold))
+                        .foregroundStyle(NordicPalette.ink)
+                    if let sessionMessage = viewModel.sessionMessage {
+                        Text(sessionMessage)
+                            .font(.callout)
+                            .foregroundStyle(NordicPalette.stone)
+                            .multilineTextAlignment(.center)
+                    }
+                }
+                .frame(maxWidth: .infinity)
             }
 
             if let feedback = viewModel.feedback {
@@ -526,10 +637,30 @@ private struct TrainingView: View {
                     .transition(.opacity)
             } else {
                 Color.clear
-                    .frame(height: 64)
+                    .frame(height: 50)
             }
         }
         .animation(.easeOut(duration: 0.18), value: viewModel.feedback?.id)
+        .overlay {
+            if let feedback = characterFeedback {
+                CharacterPopup(imageName: feedback.characterImageName, title: feedback.characterTitle)
+                    .transition(.scale(scale: 0.86).combined(with: .opacity))
+            }
+        }
+        .onChange(of: viewModel.feedback?.id) { _, _ in
+            guard let feedback = viewModel.feedback else { return }
+            Task {
+                withAnimation(.spring(response: 0.32, dampingFraction: 0.72)) {
+                    characterFeedback = feedback
+                }
+                try? await Task.sleep(for: .seconds(1.15))
+                withAnimation(.easeOut(duration: 0.18)) {
+                    if characterFeedback?.id == feedback.id {
+                        characterFeedback = nil
+                    }
+                }
+            }
+        }
         .sectionCard()
     }
 }
@@ -637,18 +768,19 @@ private struct FeedbackView: View {
                     .font(.headline)
                 Text("Loesung: \(feedback.expectedAnswer)")
                     .font(.callout)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 0)
         }
         .foregroundStyle(color)
         .padding(.horizontal, 14)
-        .padding(.vertical, 10)
+        .padding(.vertical, 9)
         .background(color.opacity(0.10))
         .overlay(
             RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .stroke(color.opacity(0.22), lineWidth: 1)
         )
-        .frame(minHeight: 64)
+        .frame(minHeight: 54)
         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 
@@ -662,6 +794,118 @@ private struct FeedbackView: View {
             NordicPalette.flagRed
         }
     }
+}
+
+private struct NorwegianFlag: View {
+    var body: some View {
+        ZStack {
+            NordicPalette.flagRed
+            Rectangle()
+                .fill(.white)
+                .frame(width: 10)
+                .offset(x: -8)
+            Rectangle()
+                .fill(.white)
+                .frame(height: 10)
+            Rectangle()
+                .fill(NordicPalette.flagBlue)
+                .frame(width: 5)
+                .offset(x: -8)
+            Rectangle()
+                .fill(NordicPalette.flagBlue)
+                .frame(height: 5)
+        }
+        .frame(width: 42, height: 28)
+        .clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 3, style: .continuous)
+                .stroke(NordicPalette.border, lineWidth: 0.7)
+        )
+        .shadow(color: .black.opacity(0.08), radius: 3, y: 1)
+        .accessibilityLabel("Norwegische Flagge")
+    }
+}
+
+private struct CharacterPopup: View {
+    let imageName: String
+    let title: String
+
+    var body: some View {
+        VStack(spacing: 8) {
+            BundledPNGImage(name: imageName)
+                .frame(width: 150, height: 145)
+            Text(title)
+                .font(.title3.weight(.bold))
+                .foregroundStyle(NordicPalette.ink)
+                .multilineTextAlignment(.center)
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 14)
+        .background(.ultraThinMaterial)
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(NordicPalette.flagBlue.opacity(0.24), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .shadow(color: .black.opacity(0.16), radius: 18, y: 8)
+        .allowsHitTesting(false)
+    }
+}
+
+private struct BundledPNGImage: View {
+    let name: String
+
+    var body: some View {
+        if let image = PlatformImage.loadBundledPNG(named: name) {
+            image.swiftUIImage
+                .resizable()
+                .scaledToFit()
+        } else {
+            Image(systemName: "photo")
+                .font(.system(size: 52, weight: .semibold))
+                .foregroundStyle(NordicPalette.flagBlue.opacity(0.55))
+        }
+    }
+}
+
+private struct PlatformImage {
+    #if os(iOS)
+    let raw: UIImage
+
+    var swiftUIImage: Image {
+        Image(uiImage: raw)
+    }
+    #elseif os(macOS)
+    let raw: NSImage
+
+    var swiftUIImage: Image {
+        Image(nsImage: raw)
+    }
+    #endif
+
+    static func loadBundledPNG(named name: String) -> PlatformImage? {
+        for bundle in Bundle.vokabelImageBundles {
+            if let url = bundle.url(forResource: name, withExtension: "png"),
+               let image = load(from: url) {
+                return PlatformImage(raw: image)
+            }
+        }
+        return nil
+    }
+
+    private static func load(from url: URL) -> RawImage? {
+        #if os(iOS)
+        UIImage(contentsOfFile: url.path)
+        #elseif os(macOS)
+        NSImage(contentsOf: url)
+        #endif
+    }
+
+    #if os(iOS)
+    private typealias RawImage = UIImage
+    #elseif os(macOS)
+    private typealias RawImage = NSImage
+    #endif
 }
 
 private struct SyncStatusView: View {
@@ -753,7 +997,7 @@ private enum NordicPalette {
 private extension View {
     func sectionCard() -> some View {
         self
-            .padding(18)
+            .padding(14)
             .background(NordicPalette.card)
             .cardStroke()
             .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
@@ -773,5 +1017,24 @@ private extension View {
         #else
         self
         #endif
+    }
+}
+
+private final class ContentViewBundleToken {}
+
+private extension Bundle {
+    static var vokabelCoreResources: Bundle {
+        #if SWIFT_PACKAGE
+        Bundle.module
+        #else
+        Bundle(for: ContentViewBundleToken.self)
+        #endif
+    }
+
+    static var vokabelImageBundles: [Bundle] {
+        var bundles = [Bundle.vokabelCoreResources, .main]
+        bundles.append(contentsOf: Bundle.allFrameworks)
+        bundles.append(contentsOf: Bundle.allBundles)
+        return bundles
     }
 }

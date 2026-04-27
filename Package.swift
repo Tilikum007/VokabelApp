@@ -19,7 +19,10 @@ let package = Package(
             name: "VokabelCore",
             resources: [
                 .process("Resources/DriveConfig.example.json"),
+                .process("Resources/cheer.png"),
+                .process("Resources/down.png"),
                 .process("Resources/MASTER_vokabelheft_norwegisch.csv"),
+                .process("Resources/wave.png"),
                 .copy("Resources/GoogleOAuthConfig.example.plist")
             ]
         ),

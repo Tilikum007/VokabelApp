@@ -1,3 +1,4 @@
+import Foundation
 import VokabelCore
 
 func check(_ condition: @autoclosure () -> Bool, _ message: String) {
@@ -10,6 +11,17 @@ let engine = TrainingEngine()
 check(engine.grade(answer: "takk", expected: "takk") == .correct, "Expected exact answer to be correct")
 check(engine.grade(answer: "tak", expected: "takk") == .almost, "Expected near answer to be almost correct")
 check(engine.grade(answer: "hund", expected: "takk") == .wrong, "Expected unrelated answer to be wrong")
+
+let codec = CSVCodec()
+let crlf = String(UnicodeScalar(13)) + String(UnicodeScalar(10))
+let csvWithCRLF = [
+    "ID,Deutsch,Norwegisch,Wortart,Herkunft,Lektion,Level_Papa,Level_Mama,Zuletzt_Papa,Zuletzt_Mama,Letztes_Ergebnis_Papa,Letztes_Ergebnis_Mama,Richtig_Papa,Falsch_Papa,Richtig_Mama,Falsch_Mama,Beispielsatz_NO,Beispielsatz_DE,Notiz,Aktiv",
+    "NO1000,ja,ja,,Sonstige; Norsk for deg,Lektion 1,0,0,,,,,0,0,0,0,,,,ja",
+    "NO1001,nein,nei,,Norsk for deg,Lektion 2,0,0,,,,,0,0,0,0,,,,ja"
+].joined(separator: crlf)
+let decodedCSV = try codec.decode(csvWithCRLF)
+check(decodedCSV.count == 2, "CRLF CSV should decode into two rows")
+check(decodedCSV[0].sourceTokens == ["Sonstige", "Norsk for deg"], "Source tokens should split semicolon-separated sources")
 
 var entry = VocabularyEntry(
     id: "NO0001",
@@ -48,5 +60,81 @@ check(entry.levelPapa == 1.5, "Choice mode should increase level by half a point
 
 let filtered = engine.eligibleEntries(from: [entry], learner: .papa, filter: TrainingFilter(level: 1))
 check(filtered.count == 1, "Level 1 filter should include level 1.5 entries")
+
+let sourceFiltered = engine.eligibleEntries(
+    from: decodedCSV,
+    learner: .papa,
+    filter: TrainingFilter(source: "Norsk for deg")
+)
+check(sourceFiltered.count == 2, "Source filter should match semicolon-separated origin tags")
+
+let base = VocabularyEntry(
+    id: "NO2000",
+    german: "hallo",
+    norwegian: "hei",
+    partOfSpeech: "",
+    source: "Norsk for deg",
+    lesson: "Lektion 1",
+    levelPapa: 1,
+    levelMama: 0,
+    lastPapa: "2026-04-26T10:00:00Z",
+    lastMama: "",
+    lastResultPapa: "richtig",
+    lastResultMama: "",
+    correctPapa: 1,
+    wrongPapa: 0,
+    correctMama: 0,
+    wrongMama: 0,
+    exampleNO: "",
+    exampleDE: "",
+    note: "",
+    active: "ja"
+)
+
+let catalogCSV = codec.encodeCatalog([base])
+let catalogDecoded = try codec.decode(catalogCSV)
+check(catalogDecoded.count == 1, "Catalog CSV should decode")
+check(catalogDecoded[0].levelPapa == 0 && catalogDecoded[0].levelMama == 0, "Catalog CSV should not persist progress values")
+
+var progressApplied = base.strippingProgress
+let events = [
+    ProgressEvent(
+        id: UUID(uuidString: "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEE1")!,
+        entryID: base.id,
+        learner: .papa,
+        timestamp: ISO8601DateFormatter().date(from: "2026-04-26T10:00:00Z")!,
+        grade: .correct,
+        correctLevelDelta: 1
+    ),
+    ProgressEvent(
+        id: UUID(uuidString: "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEE2")!,
+        entryID: base.id,
+        learner: .papa,
+        timestamp: ISO8601DateFormatter().date(from: "2026-04-26T10:05:00Z")!,
+        grade: .correct,
+        correctLevelDelta: 0.5
+    ),
+    ProgressEvent(
+        id: UUID(uuidString: "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEE3")!,
+        entryID: base.id,
+        learner: .mama,
+        timestamp: ISO8601DateFormatter().date(from: "2026-04-26T10:06:00Z")!,
+        grade: .wrong,
+        correctLevelDelta: 1
+    )
+]
+
+for event in events.sorted(by: { $0.timestamp < $1.timestamp }) {
+    progressApplied.apply(
+        event.grade,
+        learner: event.learner,
+        correctLevelDelta: event.correctLevelDelta,
+        date: event.timestamp
+    )
+}
+
+check(progressApplied.levelPapa == 1.5, "Progress events should rebuild Papa level correctly")
+check(progressApplied.correctPapa == 2, "Progress events should rebuild Papa correct counter")
+check(progressApplied.wrongMama == 1, "Progress events should rebuild Mama wrong counter")
 
 print("VokabelApp checks passed")
