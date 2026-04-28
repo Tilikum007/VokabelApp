@@ -9,7 +9,10 @@ public struct ContentView: View {
     @ObservedObject var viewModel: TrainerViewModel
     @State private var showsSettings = false
     @State private var showsWelcomePopup = false
+    @State private var showsWhatsNewPopup = false
     @State private var didPresentWelcome = false
+
+    private static let whatsNewDefaultsKey = "de.papa.vokabelapp.whatsNew.focused-training-2026-04-28"
 
     public init(viewModel: TrainerViewModel) {
         self.viewModel = viewModel
@@ -35,9 +38,23 @@ public struct ContentView: View {
             }
         }
         .overlay {
-            if showsWelcomePopup {
-                CharacterPopup(imageName: "wave", title: "Hei, god dag!")
-                    .transition(.scale(scale: 0.86).combined(with: .opacity))
+            ZStack {
+                if showsWelcomePopup && !showsWhatsNewPopup {
+                    CharacterPopup(imageName: "wave", title: "Hei, god dag!")
+                        .transition(.scale(scale: 0.86).combined(with: .opacity))
+                }
+
+                if showsWhatsNewPopup {
+                    Color.black.opacity(0.22)
+                        .ignoresSafeArea()
+                    WhatsNewPopup {
+                        UserDefaults.standard.set(true, forKey: Self.whatsNewDefaultsKey)
+                        withAnimation(.easeOut(duration: 0.2)) {
+                            showsWhatsNewPopup = false
+                        }
+                    }
+                    .transition(.scale(scale: 0.92).combined(with: .opacity))
+                }
             }
         }
         .platformContentFrame()
@@ -45,6 +62,12 @@ public struct ContentView: View {
             await viewModel.load()
             guard !didPresentWelcome else { return }
             didPresentWelcome = true
+            if !UserDefaults.standard.bool(forKey: Self.whatsNewDefaultsKey) {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.78)) {
+                    showsWhatsNewPopup = true
+                }
+                return
+            }
             withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
                 showsWelcomePopup = true
             }
@@ -53,6 +76,68 @@ public struct ContentView: View {
                 showsWelcomePopup = false
             }
         }
+    }
+}
+
+private struct WhatsNewPopup: View {
+    let dismiss: () -> Void
+
+    private let items = [
+        ("textformat.abc", "Substantive fragen Wort und Artikel getrennt ab."),
+        ("slider.horizontal.3", "Neuer Fokus: Wortschatz oder nur Artikel trainieren."),
+        ("arrow.triangle.2.circlepath", "Schwache Vokabeln werden beim Start einer Session bevorzugt."),
+        ("list.bullet.clipboard", "Am Session-Ende gibt es eine Fehlerliste und direktes Wiederholen."),
+        ("quote.bubble", "Feedback zeigt jetzt Beispielsaetze, wenn sie vorhanden sind."),
+        ("checklist", "Master-Pruefung und Vokabel-Update-Status sind in den Einstellungen sichtbar.")
+    ]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .top, spacing: 12) {
+                NorwegianFlag()
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Das ist neu!")
+                        .font(.title2.weight(.bold))
+                        .foregroundStyle(NordicPalette.ink)
+                    Text("Kurzer Ueberblick ueber die letzten Anpassungen.")
+                        .font(.callout)
+                        .foregroundStyle(NordicPalette.stone)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 11) {
+                ForEach(items, id: \.1) { item in
+                    Label {
+                        Text(item.1)
+                            .fixedSize(horizontal: false, vertical: true)
+                    } icon: {
+                        Image(systemName: item.0)
+                            .foregroundStyle(NordicPalette.flagBlue)
+                            .frame(width: 24)
+                    }
+                    .font(.callout)
+                    .foregroundStyle(NordicPalette.ink)
+                }
+            }
+
+            Button(action: dismiss) {
+                Text("Verstanden")
+                    .font(.callout.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(NordicPalette.flagBlue)
+        }
+        .padding(20)
+        .frame(maxWidth: 420)
+        .background(NordicPalette.card)
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(NordicPalette.flagBlue.opacity(0.24), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .shadow(color: .black.opacity(0.18), radius: 24, y: 10)
+        .padding(24)
     }
 }
 
