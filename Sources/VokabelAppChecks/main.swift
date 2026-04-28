@@ -147,6 +147,19 @@ check(nounQuestion.expectedAnswer == "bord", "Norwegian noun answer should conta
 check(nounQuestion.expectedArticle == "et", "Norwegian noun article should be separate")
 check(nounQuestion.articleOptions.contains("et"), "Article options should contain the expected article")
 
+let articleQuestion = engine.makeQuestion(entry: noun, direction: .germanToNorwegian, allEntries: [base, noun], optionsCount: 5, focus: .articles)
+check(articleQuestion.asksOnlyArticle, "Article training should ask only for the article")
+check(articleQuestion.expectedAnswer == "et", "Article training expected answer should be the article")
+
+let validator = MasterValidator()
+let cleanReport = validator.validate([noun])
+check(cleanReport.issues.isEmpty, "Clean noun entry should pass master validation")
+
+var invalidNoun = noun
+invalidNoun.article = "ei"
+let invalidReport = validator.validate([invalidNoun])
+check(!invalidReport.issues.isEmpty, "Invalid article values should be reported")
+
 let catalogCSV = codec.encodeCatalog([base])
 let catalogDecoded = try codec.decode(catalogCSV)
 check(catalogDecoded.count == 1, "Catalog CSV should decode")

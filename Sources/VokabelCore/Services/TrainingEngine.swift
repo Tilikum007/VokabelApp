@@ -25,10 +25,12 @@ public struct TrainingEngine {
         learner: Learner,
         filter: TrainingFilter,
         count: Int,
-        lastEntryID: String? = nil
+        lastEntryID: String? = nil,
+        focus: TrainingFocus = .vocabulary
     ) -> [VocabularyEntry] {
         let pool = eligibleEntries(from: entries, learner: learner, filter: filter)
             .filter { $0.id != lastEntryID }
+            .filter { focus == .vocabulary || !$0.article.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
 
         return pool.sorted { left, right in
             let leftScore = score(left, learner: learner)
@@ -44,8 +46,26 @@ public struct TrainingEngine {
         entry: VocabularyEntry,
         direction: QuestionDirection,
         allEntries: [VocabularyEntry],
-        optionsCount: Int
+        optionsCount: Int,
+        focus: TrainingFocus = .vocabulary
     ) -> TrainingQuestion {
+        if focus == .articles {
+            let expectedArticle = cleanArticle(entry.article)
+            return TrainingQuestion(
+                entryID: entry.id,
+                prompt: entry.german,
+                promptDetail: entry.norwegian,
+                expectedAnswer: expectedArticle,
+                expectedArticle: expectedArticle,
+                direction: .germanToNorwegian,
+                focus: .articles,
+                options: [],
+                articleOptions: makeArticleOptions(expectedArticle: expectedArticle, entries: allEntries),
+                exampleNO: entry.exampleNO,
+                exampleDE: entry.exampleDE
+            )
+        }
+
         let expected = direction == .germanToNorwegian ? entry.norwegian : entry.german
         let expectedArticle = direction == .germanToNorwegian ? cleanArticle(entry.article) : ""
         let prompt = direction == .germanToNorwegian ? entry.german : norwegianPrompt(for: entry)
@@ -61,11 +81,15 @@ public struct TrainingEngine {
         return TrainingQuestion(
             entryID: entry.id,
             prompt: prompt,
+            promptDetail: "",
             expectedAnswer: expected,
             expectedArticle: expectedArticle,
             direction: direction,
+            focus: .vocabulary,
             options: ([expected] + distractors).shuffled(),
-            articleOptions: articleOptions
+            articleOptions: articleOptions,
+            exampleNO: entry.exampleNO,
+            exampleDE: entry.exampleDE
         )
     }
 
@@ -105,8 +129,11 @@ public struct TrainingEngine {
 
     private func score(_ entry: VocabularyEntry, learner: Learner) -> Double {
         let last = learner == .papa ? entry.lastPapa : entry.lastMama
+        let wrong = learner == .papa ? entry.wrongPapa : entry.wrongMama
+        let correct = learner == .papa ? entry.correctPapa : entry.correctMama
         let staleBonus = last.isEmpty ? -10.0 : 0.0
-        return entry.level(for: learner) * 10 + staleBonus
+        let weaknessBonus = Double(wrong * 3) - Double(correct)
+        return entry.level(for: learner) * 10 + staleBonus - weaknessBonus
     }
 
     private func normalize(_ value: String) -> String {

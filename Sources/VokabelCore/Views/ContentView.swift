@@ -394,6 +394,17 @@ private struct SettingsView: View {
                 }
 
                 VStack(spacing: 10) {
+                    OptionGroup(title: "Training") {
+                        ForEach(TrainingFocus.allCases) { focus in
+                            OptionChip(
+                                title: focus.rawValue,
+                                isSelected: viewModel.trainingFocus == focus
+                            ) {
+                                viewModel.trainingFocus = focus
+                            }
+                        }
+                    }
+
                     OptionGroup(title: "Richtung") {
                         ForEach(DirectionMode.allCases) { mode in
                             OptionChip(
@@ -463,6 +474,8 @@ private struct SettingsView: View {
                         }
                     }
                 }
+
+                MasterValidationView(viewModel: viewModel)
             }
         }
         .sectionCard()
@@ -514,6 +527,51 @@ private struct OptionChip: View {
                 .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         }
         .buttonStyle(.plain)
+    }
+}
+
+private struct MasterValidationView: View {
+    @ObservedObject var viewModel: TrainerViewModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Button {
+                viewModel.validateMaster()
+            } label: {
+                Label("Master pruefen", systemImage: "checklist")
+                    .font(.callout.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(NordicPalette.flagBlue)
+
+            if let report = viewModel.masterValidationReport {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(report.title)
+                        .font(.headline)
+                    Text("\(report.checkedCount) Eintraege geprueft")
+                        .font(.caption)
+                        .foregroundStyle(NordicPalette.stone)
+
+                    ForEach(report.issues.prefix(6)) { issue in
+                        Text("\(issue.entryID): \(issue.message)")
+                            .font(.caption)
+                            .foregroundStyle(NordicPalette.flagRed)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    if report.issues.count > 6 {
+                        Text("+ \(report.issues.count - 6) weitere")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(NordicPalette.flagRed)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(10)
+                .background(report.issues.isEmpty ? NordicPalette.flagBlue.opacity(0.08) : NordicPalette.flagRed.opacity(0.08))
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            }
+        }
     }
 }
 
@@ -584,8 +642,44 @@ private struct TrainingView: View {
                         .multilineTextAlignment(.center)
                         .foregroundStyle(NordicPalette.ink)
                         .minimumScaleFactor(0.65)
+                    if !question.promptDetail.isEmpty {
+                        Text(question.promptDetail)
+                            .font(.title3.weight(.semibold))
+                            .foregroundStyle(NordicPalette.flagBlue)
+                            .multilineTextAlignment(.center)
+                    }
 
-                    if viewModel.answerMode == .choice {
+                    if question.asksOnlyArticle {
+                        VStack(spacing: 12) {
+                            HStack(spacing: 8) {
+                                ForEach(question.articleOptions, id: \.self) { option in
+                                    Button {
+                                        withAnimation(.spring(response: 0.34, dampingFraction: 0.72)) {
+                                            viewModel.chooseArticle(option)
+                                        }
+                                    } label: {
+                                        ArticleOptionLabel(
+                                            option: option,
+                                            isSelected: viewModel.selectedArticle == option
+                                        )
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+
+                            Button {
+                                withAnimation(.spring(response: 0.34, dampingFraction: 0.72)) {
+                                    viewModel.submitChoiceAnswer()
+                                }
+                            } label: {
+                                Label("Antwort pruefen", systemImage: "checkmark")
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(NordicPalette.flagBlue)
+                            .disabled(viewModel.selectedArticle.isEmpty)
+                        }
+                    } else if viewModel.answerMode == .choice {
                         if question.requiresArticle {
                             VStack(spacing: 12) {
                                 HStack(alignment: .top, spacing: 10) {
@@ -702,18 +796,7 @@ private struct TrainingView: View {
                 }
                 .frame(maxWidth: .infinity)
             } else {
-                VStack(spacing: 10) {
-                    Text(viewModel.sessionTotal == 0 ? "Keine Session" : "Fertig")
-                        .font(.largeTitle.weight(.semibold))
-                        .foregroundStyle(NordicPalette.ink)
-                    if let sessionMessage = viewModel.sessionMessage {
-                        Text(sessionMessage)
-                            .font(.callout)
-                            .foregroundStyle(NordicPalette.stone)
-                            .multilineTextAlignment(.center)
-                    }
-                }
-                .frame(maxWidth: .infinity)
+                SessionFinishedView(viewModel: viewModel)
             }
 
             if let feedback = viewModel.feedback {
@@ -817,6 +900,79 @@ private struct ProgressPill: View {
     }
 }
 
+private struct SessionFinishedView: View {
+    @ObservedObject var viewModel: TrainerViewModel
+
+    var body: some View {
+        VStack(spacing: 14) {
+            Text(viewModel.sessionTotal == 0 ? "Keine Session" : "Fertig")
+                .font(.largeTitle.weight(.semibold))
+                .foregroundStyle(NordicPalette.ink)
+
+            if viewModel.sessionTotal > 0 {
+                Text("\(viewModel.correctCount) richtig, \(viewModel.wrongCount) falsch")
+                    .font(.headline)
+                    .foregroundStyle(NordicPalette.stone)
+
+                Text("\(successRate)%")
+                    .font(.system(size: 42, weight: .bold, design: .rounded))
+                    .foregroundStyle(successRate >= 80 ? NordicPalette.flagBlue : NordicPalette.flagRed)
+            }
+
+            if let sessionMessage = viewModel.sessionMessage {
+                Text(sessionMessage)
+                    .font(.callout)
+                    .foregroundStyle(NordicPalette.stone)
+                    .multilineTextAlignment(.center)
+            }
+
+            if !viewModel.sessionMistakes.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Nochmal ansehen")
+                        .font(.headline)
+                        .foregroundStyle(NordicPalette.ink)
+                    ForEach(viewModel.sessionMistakes.prefix(5)) { mistake in
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(mistake.prompt)
+                                .font(.callout.weight(.semibold))
+                            Text("Deine Antwort: \(mistake.givenAnswer)")
+                                .font(.caption)
+                            Text("Richtig: \(mistake.expectedAnswer)")
+                                .font(.caption.weight(.semibold))
+                        }
+                        .foregroundStyle(NordicPalette.stone)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                Button {
+                    viewModel.retryMistakes()
+                } label: {
+                    Label("Fehler nochmal ueben", systemImage: "arrow.counterclockwise")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(NordicPalette.flagRed)
+            }
+
+            Button {
+                viewModel.startSession()
+            } label: {
+                Label("Neue Session", systemImage: "play.fill")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(NordicPalette.flagBlue)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var successRate: Int {
+        guard viewModel.sessionTotal > 0 else { return 0 }
+        return Int((Double(viewModel.correctCount) / Double(viewModel.sessionTotal) * 100).rounded())
+    }
+}
+
 private struct ChoiceOptionLabel: View {
     let option: String
     var isSelected = false
@@ -876,6 +1032,19 @@ private struct FeedbackView: View {
                 Text("Loesung: \(feedback.expectedAnswer)")
                     .font(.callout)
                     .fixedSize(horizontal: false, vertical: true)
+                if !feedback.exampleNO.isEmpty || !feedback.exampleDE.isEmpty {
+                    VStack(alignment: .leading, spacing: 1) {
+                        if !feedback.exampleNO.isEmpty {
+                            Text(feedback.exampleNO)
+                        }
+                        if !feedback.exampleDE.isEmpty {
+                            Text(feedback.exampleDE)
+                        }
+                    }
+                    .font(.caption)
+                    .foregroundStyle(color.opacity(0.86))
+                    .fixedSize(horizontal: false, vertical: true)
+                }
             }
             Spacer(minLength: 0)
         }
@@ -1031,8 +1200,17 @@ private struct SyncStatusView: View {
                 Text(store.lastSyncMessage)
                     .font(.callout)
                     .fixedSize(horizontal: false, vertical: true)
+                Text("Vokabel-Update: \(store.vocabularyUpdateSummary)")
+                    .font(.caption)
+                    .foregroundStyle(NordicPalette.stone)
+                    .fixedSize(horizontal: false, vertical: true)
                 if let date = store.lastSyncDate {
                     Text(date, style: .time)
+                        .font(.caption)
+                        .foregroundStyle(NordicPalette.stone)
+                }
+                if let updateDate = store.lastVocabularyUpdateCheckDate {
+                    Text("Letzte Update-Pruefung: \(updateDate.formatted(date: .abbreviated, time: .shortened))")
                         .font(.caption)
                         .foregroundStyle(NordicPalette.stone)
                 }

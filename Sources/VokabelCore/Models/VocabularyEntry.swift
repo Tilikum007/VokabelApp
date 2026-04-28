@@ -46,6 +46,13 @@ public enum AnswerMode: String, CaseIterable, Identifiable {
     public var id: String { rawValue }
 }
 
+public enum TrainingFocus: String, CaseIterable, Identifiable {
+    case vocabulary = "Wortschatz"
+    case articles = "Artikel"
+
+    public var id: String { rawValue }
+}
+
 public struct VocabularyEntry: Identifiable, Equatable {
     public var id: String
     public var german: String
@@ -227,18 +234,93 @@ public struct TrainingQuestion: Identifiable, Equatable {
     public let id = UUID()
     public let entryID: String
     public let prompt: String
+    public let promptDetail: String
     public let expectedAnswer: String
     public let expectedArticle: String
     public let direction: QuestionDirection
+    public let focus: TrainingFocus
     public let options: [String]
     public let articleOptions: [String]
+    public let exampleNO: String
+    public let exampleDE: String
 
     public var requiresArticle: Bool {
-        direction == .germanToNorwegian && !expectedArticle.isEmpty
+        focus == .vocabulary && direction == .germanToNorwegian && !expectedArticle.isEmpty
+    }
+
+    public var asksOnlyArticle: Bool {
+        focus == .articles
     }
 
     public var expectedDisplayAnswer: String {
+        guard !asksOnlyArticle else { return expectedArticle }
         guard requiresArticle else { return expectedAnswer }
         return "\(expectedArticle) \(expectedAnswer)"
+    }
+}
+
+public struct SessionMistake: Identifiable, Equatable {
+    public let id = UUID()
+    public let entryID: String
+    public let prompt: String
+    public let expectedAnswer: String
+    public let givenAnswer: String
+    public let exampleNO: String
+    public let exampleDE: String
+}
+
+public struct MasterValidationIssue: Identifiable, Equatable {
+    public let id = UUID()
+    public let entryID: String
+    public let message: String
+}
+
+public struct MasterValidationReport: Equatable {
+    public var checkedCount: Int
+    public var issues: [MasterValidationIssue]
+
+    public var title: String {
+        issues.isEmpty ? "Master-Pruefung bestanden" : "\(issues.count) Auffaelligkeiten gefunden"
+    }
+}
+
+public struct MasterValidator {
+    public init() {}
+
+    public func validate(_ entries: [VocabularyEntry]) -> MasterValidationReport {
+        var issues: [MasterValidationIssue] = []
+        var seenIDs = Set<String>()
+
+        for entry in entries {
+            if entry.id.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                issues.append(MasterValidationIssue(entryID: "ohne ID", message: "ID fehlt"))
+            } else if !seenIDs.insert(entry.id).inserted {
+                issues.append(MasterValidationIssue(entryID: entry.id, message: "ID ist doppelt vorhanden"))
+            }
+
+            if entry.german.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                issues.append(MasterValidationIssue(entryID: entry.id, message: "Deutsch fehlt"))
+            }
+
+            if entry.norwegian.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                issues.append(MasterValidationIssue(entryID: entry.id, message: "Norwegisch fehlt"))
+            }
+
+            let article = entry.article.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !article.isEmpty && !["en", "et", "en/ei"].contains(article) {
+                issues.append(MasterValidationIssue(entryID: entry.id, message: "Artikel ist nicht erlaubt: \(article)"))
+            }
+
+            if entry.norwegian.range(of: #",\s*(en|ei|et|en/ei|ei/en)\s*$"#, options: [.regularExpression, .caseInsensitive]) != nil {
+                issues.append(MasterValidationIssue(entryID: entry.id, message: "Artikel steht noch im norwegischen Wortfeld"))
+            }
+
+            let partOfSpeech = entry.partOfSpeech.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            if !article.isEmpty && !partOfSpeech.contains("substantiv") {
+                issues.append(MasterValidationIssue(entryID: entry.id, message: "Artikel gesetzt, aber Wortart ist nicht Substantiv"))
+            }
+        }
+
+        return MasterValidationReport(checkedCount: entries.count, issues: issues)
     }
 }

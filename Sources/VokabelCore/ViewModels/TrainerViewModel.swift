@@ -25,12 +25,16 @@ public final class TrainerViewModel: ObservableObject {
     @Published public var wrongCount = 0
     @Published public var remaining = 0
     @Published public var directionMode: DirectionMode = .germanToNorwegian
+    @Published public var trainingFocus: TrainingFocus = .vocabulary
     @Published public var answerMode: AnswerMode
     @Published public private(set) var sessionMessage: String?
+    @Published public private(set) var sessionMistakes: [SessionMistake] = []
+    @Published public private(set) var masterValidationReport: MasterValidationReport?
 
     public let store: VocabularyStore
     public let auth: AuthCoordinator
     private let engine = TrainingEngine()
+    private let validator = MasterValidator()
     private var session: [VocabularyEntry] = []
     private var directionIndex = 0
     private var lastEntryID: String?
@@ -126,13 +130,15 @@ public final class TrainerViewModel: ObservableObject {
             learner: learner,
             filter: filter,
             count: sessionSize,
-            lastEntryID: lastEntryID
+            lastEntryID: lastEntryID,
+            focus: trainingFocus
         )
         sessionTotal = session.count
         correctCount = 0
         wrongCount = 0
         remaining = session.count
         feedback = nil
+        sessionMistakes = []
         directionIndex = 0
         sessionMessage = sessionMessage(for: session.count)
         nextQuestion()
@@ -141,7 +147,9 @@ public final class TrainerViewModel: ObservableObject {
     public func submitTypedAnswer() {
         guard let question = currentQuestion else { return }
         let grade: AnswerGrade
-        if question.requiresArticle {
+        if question.asksOnlyArticle {
+            grade = engine.gradeArticle(answer: selectedArticle, expected: question.expectedArticle)
+        } else if question.requiresArticle {
             grade = engine.grade(
                 answer: answerText,
                 expected: question.expectedAnswer,
@@ -173,6 +181,11 @@ public final class TrainerViewModel: ObservableObject {
 
     public func submitChoiceAnswer() {
         guard let question = currentQuestion else { return }
+        if question.asksOnlyArticle {
+            guard !selectedArticle.isEmpty else { return }
+            submit(grade: engine.gradeArticle(answer: selectedArticle, expected: question.expectedArticle))
+            return
+        }
         guard question.requiresArticle else {
             guard !selectedChoice.isEmpty else { return }
             submit(grade: selectedChoice == question.expectedAnswer ? .correct : .wrong)
@@ -193,7 +206,22 @@ public final class TrainerViewModel: ObservableObject {
             learner: learner,
             correctLevelDelta: correctLevelDelta
         )
-        feedback = FeedbackState(grade: grade, expectedAnswer: question.expectedDisplayAnswer)
+        feedback = FeedbackState(
+            grade: grade,
+            expectedAnswer: question.expectedDisplayAnswer,
+            exampleNO: question.exampleNO,
+            exampleDE: question.exampleDE
+        )
+        if grade != .correct {
+            sessionMistakes.append(SessionMistake(
+                entryID: question.entryID,
+                prompt: question.prompt,
+                expectedAnswer: question.expectedDisplayAnswer,
+                givenAnswer: currentGivenAnswer(for: question),
+                exampleNO: question.exampleNO,
+                exampleDE: question.exampleDE
+            ))
+        }
         if grade == .correct {
             correctCount += 1
         } else {
@@ -220,11 +248,13 @@ public final class TrainerViewModel: ObservableObject {
             entry: entry,
             direction: direction,
             allEntries: store.entries,
-            optionsCount: answerMode == .choice ? 5 : 0
+            optionsCount: answerMode == .choice ? 5 : 0,
+            focus: trainingFocus
         )
     }
 
     private func nextDirection() -> QuestionDirection {
+        guard trainingFocus == .vocabulary else { return .germanToNorwegian }
         switch directionMode {
         case .germanToNorwegian:
             return .germanToNorwegian
@@ -235,6 +265,46 @@ public final class TrainerViewModel: ObservableObject {
             directionIndex += 1
             return direction
         }
+    }
+
+    public func validateMaster() {
+        masterValidationReport = validator.validate(store.entries)
+    }
+
+    public func retryMistakes() {
+        let mistakeIDs = Set(sessionMistakes.map(\.entryID))
+        let pool = store.entries.filter { mistakeIDs.contains($0.id) }
+        guard !pool.isEmpty else { return }
+        session = Array(pool.prefix(sessionSize))
+        sessionTotal = session.count
+        correctCount = 0
+        wrongCount = 0
+        remaining = session.count
+        feedback = nil
+        sessionMistakes = []
+        sessionMessage = sessionMessage(for: session.count)
+        nextQuestion()
+    }
+
+    private func currentGivenAnswer(for question: TrainingQuestion) -> String {
+        if question.asksOnlyArticle {
+            return selectedArticle.isEmpty ? "keine Auswahl" : selectedArticle
+        }
+
+        if answerMode == .choice {
+            if question.requiresArticle {
+                let article = selectedArticle.isEmpty ? "kein Artikel" : selectedArticle
+                let word = selectedChoice.isEmpty ? "kein Wort" : selectedChoice
+                return "\(article) \(word)"
+            }
+            return selectedChoice.isEmpty ? "keine Auswahl" : selectedChoice
+        }
+
+        if question.requiresArticle {
+            let article = selectedArticle.isEmpty ? "kein Artikel" : selectedArticle
+            return "\(article) \(answerText)"
+        }
+        return answerText
     }
 
     public static var defaultAnswerMode: AnswerMode {
@@ -310,10 +380,14 @@ public struct FeedbackState: Equatable, Identifiable {
     public let id = UUID()
     public let grade: AnswerGrade
     public let expectedAnswer: String
+    public let exampleNO: String
+    public let exampleDE: String
 
-    public init(grade: AnswerGrade, expectedAnswer: String) {
+    public init(grade: AnswerGrade, expectedAnswer: String, exampleNO: String = "", exampleDE: String = "") {
         self.grade = grade
         self.expectedAnswer = expectedAnswer
+        self.exampleNO = exampleNO
+        self.exampleDE = exampleDE
     }
 
     public var title: String {

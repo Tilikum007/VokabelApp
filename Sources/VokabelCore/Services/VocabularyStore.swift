@@ -7,6 +7,8 @@ public final class VocabularyStore: ObservableObject {
     @Published public private(set) var lastSyncMessage = "Noch nicht synchronisiert"
     @Published public private(set) var lastSyncResult: SyncResult = .idle
     @Published public private(set) var lastSyncDate: Date?
+    @Published public private(set) var lastVocabularyUpdateCheckDate: Date?
+    @Published public private(set) var vocabularyUpdateSummary = "Noch nicht geprueft"
 
     private let codec = CSVCodec()
     private let localFileName: String
@@ -83,6 +85,8 @@ public final class VocabularyStore: ObservableObject {
             }
 
             guard !newEntries.isEmpty || correctedCount > 0 else {
+                lastVocabularyUpdateCheckDate = Date()
+                vocabularyUpdateSummary = "Keine neuen oder korrigierten Vokabeln"
                 setSyncMessage("Keine neuen Vokabeln gefunden", result: .success)
                 return
             }
@@ -97,6 +101,8 @@ public final class VocabularyStore: ObservableObject {
                 updateMessagePart(count: newEntries.count, singular: "neue Vokabel", plural: "neue Vokabeln"),
                 updateMessagePart(count: correctedCount, singular: "korrigierte Vokabel", plural: "korrigierte Vokabeln")
             ].compactMap { $0 }
+            lastVocabularyUpdateCheckDate = Date()
+            vocabularyUpdateSummary = messageParts.joined(separator: ", ")
             setSyncMessage("\(messageParts.joined(separator: ", ")) uebernommen", result: .success)
         } catch {
             setSyncMessage("Vokabel-Update fehlgeschlagen: \(error.localizedDescription)", result: .failure)
@@ -147,6 +153,8 @@ public final class VocabularyStore: ObservableObject {
 
             let catalogText = try await driveClient.downloadText(fileID: configuration.masterFile.id, accessToken: accessToken)
             catalogEntries = try codec.decode(catalogText).map(\.strippingProgress)
+            lastVocabularyUpdateCheckDate = Date()
+            vocabularyUpdateSummary = "\(catalogEntries.count) Vokabeln im lokalen Katalog"
 
             let remoteProgressFiles = try await loadRemoteProgressFiles(
                 folderID: configuration.progressFolder.id,
