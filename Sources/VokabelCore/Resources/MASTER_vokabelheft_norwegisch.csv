@@ -1,4 +1,4 @@
-﻿ID,Deutsch,Norwegisch,Artikel,Wortart,Herkunft,Lektion,Level_Papa,Level_Mama,Zuletzt_Papa,Zuletzt_Mama,Letztes_Ergebnis_Papa,Letztes_Ergebnis_Mama,Richtig_Papa,Falsch_Papa,Richtig_Mama,Falsch_Mama,Beispielsatz_NO,Beispielsatz_DE,Notiz,Aktiv
+ID,Deutsch,Norwegisch,Artikel,Wortart,Herkunft,Lektion,Level_Papa,Level_Mama,Zuletzt_Papa,Zuletzt_Mama,Letztes_Ergebnis_Papa,Letztes_Ergebnis_Mama,Richtig_Papa,Falsch_Papa,Richtig_Mama,Falsch_Mama,Beispielsatz_NO,Beispielsatz_DE,Notiz,Aktiv
 NO0001,italienisch,italiensk,,,Sonstige,,1,0,,,,,0,0,0,0,,,,ja
 NO0002,arbeiten,arbeide,,,Sonstige,,1,0,,,,,0,0,0,0,,,,ja
 NO0003,ja,ja,,,Sonstige; Norsk for deg,,1,0,,,,,0,0,0,0,,,,ja
@@ -122,7 +122,7 @@ NO0120,rufen; (sich) nennen,kalle,,Verb,B1-4/26,,1,0,2026-04-25T20:42:29Z,,richt
 NO0121,treffen,å møte,,Verb,B1-4/26,,1,0,2026-04-25T20:42:35Z,,richtig,,2,0,0,0,Jeg møter deg.,Ich treffe dich.,,ja
 NO0122,sich treffen,å møtes,,Verb,B1-4/26,,1,0,2026-04-25T20:42:40Z,,richtig,,2,0,0,0,Vi møtes.,Wir treffen uns.,,ja
 NO0123,Aussprachehinweis,"ung, tung, sunget",,Aussprache,B1-4/26,,1,0,2026-04-25T20:42:46Z,,richtig,,2,0,0,0,,,"Aussprachehinweis, keine eigentliche Vokabel",nein
-NO0124,Verwandtschaft; Familie; Geschlecht (im Sinne von Familie),slekt,ei/en,Substantiv,B1-4/26,,1,0,2026-04-25T20:42:56Z,,richtig,,2,0,0,0,,,,ja
+NO0124,Verwandtschaft; Familie; Geschlecht (im Sinne von Familie),slekt,en/ei,Substantiv,B1-4/26,,1,0,2026-04-25T20:42:56Z,,richtig,,2,0,0,0,,,,ja
 NO0125,verwandt sein mit jemandem,å være i slekt med noen,,Ausdruck,B1-4/26,,0.5,0,2026-04-25T20:39:10Z,,richtig,,1,0,0,0,,,,ja
 NO0126,Geschlecht (f. eks. grammatisches Geschlecht),kjønn,et,Substantiv,B1-4/26,,0.5,0,2026-04-25T20:42:22Z,,richtig,,1,1,0,0,,,"f. eks. hankjønn, hunkjønn",ja
 NO0127,Ehepartner/-in,ektefelle,en,Substantiv,B1-4/26,,0.5,0,2026-04-25T20:39:39Z,,richtig,,1,0,0,0,,,"en (ekte)mann, ei/en kone",ja
@@ -136,9 +136,9 @@ NO0134,herrlich; wunderschön,nydelig,,Adjektiv,B1-4/26,,0.5,0,2026-04-25T20:40:
 NO0135,Spaß,moro,,Substantiv,B1-4/26,,0.5,0,2026-04-25T20:40:28Z,,richtig,,1,0,0,0,,,,ja
 NO0136,so bald erst mal nicht,med det første,,Ausdruck,B1-4/26,,0.5,0,2026-04-25T20:40:35Z,,richtig,,1,0,0,0,,,,ja
 NO0137,das Alten- und Pflegeheim,alders- og sykehjem,et,Substantiv,B1-4/26,,0.5,0,2026-04-25T20:40:44Z,,richtig,,1,0,0,0,,,,ja
-NO0138,der Heimatort; die Heimatgemeinde,hjembygd,ei,Substantiv,B1-4/26,,0.5,0,2026-04-25T20:40:52Z,,richtig,,1,0,0,0,,,,ja
+NO0138,der Heimatort; die Heimatgemeinde,hjembygd,en/ei,Substantiv,B1-4/26,,0.5,0,2026-04-25T20:40:52Z,,richtig,,1,0,0,0,,,,ja
 NO0139,die Kraft,kraft,en,Substantiv,B1-4/26,,0.5,0,2026-04-25T20:41:03Z,,richtig,,1,0,0,0,,,,ja
-NO0140,die Medizinflasche,medisinflaske,ei,Substantiv,B1-4/26,,0.5,0,2026-04-25T20:41:09Z,,richtig,,1,0,0,0,,,,ja
+NO0140,die Medizinflasche,medisinflaske,en/ei,Substantiv,B1-4/26,,0.5,0,2026-04-25T20:41:09Z,,richtig,,1,0,0,0,,,,ja
 NO0141,der Nachttisch,nattbord,et,Substantiv,B1-4/26,,0.5,0,2026-04-25T20:41:14Z,,richtig,,1,0,0,0,,,,ja
 NO0142,die Uhrzeit,klokkeslett,et,Substantiv,B1-4/26,,0.5,0,2026-04-25T20:41:17Z,,richtig,,1,0,0,0,,,,ja
 NO0143,sich abmühen; kämpfen,å streve,,Verb,B1-4/26,,0.5,0,2026-04-25T20:41:24Z,,richtig,,1,0,0,0,,,,ja
@@ -332,7 +332,7 @@ NO0330,Mach / Macht / Machen Sie es gut.,Ha det bra.,,,Norsk for deg,Lektion 1,0
 NO0331,Mach / Macht / Machen Sie es gut.,Ha det.,,,Norsk for deg,Lektion 1,0,0,,,,,0,0,0,0,,,,ja
 NO0332,"hier: denn, dann (Floskel)",da,,,Norsk for deg,Lektion 1,0,0,,,,,0,0,0,0,,,,ja
 NO0333,Auf Wiedersehen (dann).,"Adjø, da.",,,Norsk for deg,Lektion 1,0,0,,,,,0,0,0,0,,,,ja
-NO0334,Nacht,natt,ei/en,Substantiv,Norsk for deg,Lektion 1,0,0,,,,,0,0,0,0,,,,ja
+NO0334,Nacht,natt,en/ei,Substantiv,Norsk for deg,Lektion 1,0,0,,,,,0,0,0,0,,,,ja
 NO0335,Gute Nacht.,God natt.,,,Norsk for deg,Lektion 1,0,0,,,,,0,0,0,0,,,,ja
 NO0336,Zu guter Letzt.,Til syvende og sist.,,,Norsk for deg,Lektion 1,0,0,,,,,0,0,0,0,,,,ja
 NO0337,alles,alt,,,Norsk for deg,Lektion 1,0,0,,,,,0,0,0,0,,,,ja
@@ -343,7 +343,7 @@ NO0341,Grammatik,grammatikk,en,Substantiv,Norsk for deg,Lektion 1,0,0,,,,,0,0,0,
 NO0342,Wie geht es dir / Ihnen?,Hvordan har du det?,,,Norsk for deg,Lektion 2,0,0,,,,,0,0,0,0,,,,ja
 NO0343,Wer ...?,Hvem ...?,,,Norsk for deg,Lektion 2,0,0,,,,,0,0,0,0,,,,ja
 NO0344,Mann,mann,en,Substantiv,Norsk for deg,Lektion 2,0,0,,,,,0,0,0,0,,,,ja
-NO0345,Frau,kvinne,ei/en,Substantiv,Norsk for deg,Lektion 2,0,0,,,,,0,0,0,0,,,,ja
+NO0345,Frau,kvinne,en/ei,Substantiv,Norsk for deg,Lektion 2,0,0,,,,,0,0,0,0,,,,ja
 NO0346,raten,å gjette,,,Norsk for deg,Lektion 2,0,0,,,,,0,0,0,0,,,,ja
 NO0347,zuerst,først,,,Norsk for deg,Lektion 2,0,0,,,,,0,0,0,0,,,,ja
 NO0348,Rate / Ratet / Raten Sie zuerst.,Gjett først.,,,Norsk for deg,Lektion 2,0,0,,,,,0,0,0,0,,,,ja
@@ -365,7 +365,7 @@ NO0363,Und ihr?,Hva med dere?,,,Norsk for deg,Lektion 2,0,0,,,,,0,0,0,0,,,,ja
 NO0364,übrigens,for øvrig,,,Norsk for deg,Lektion 2,0,0,,,,,0,0,0,0,,,,ja
 NO0365,diese / r / s,dette,,,Norsk for deg,Lektion 2,0,0,,,,,0,0,0,0,,,,ja
 NO0366,Dies ist ...,Dette er ...,,,Norsk for deg,Lektion 2,0,0,,,,,0,0,0,0,,,,ja
-NO0367,Ehefrau,kone,ei/en,Substantiv,Norsk for deg,Lektion 2,0,0,,,,,0,0,0,0,,,,ja
+NO0367,Ehefrau,kone,en/ei,Substantiv,Norsk for deg,Lektion 2,0,0,,,,,0,0,0,0,,,,ja
 NO0368,mein / e,min,,,Norsk for deg,Lektion 2,0,0,,,,,0,0,0,0,,,,ja
 NO0369,meine (Ehe-)Frau,kona mi,,,Norsk for deg,Lektion 2,0,0,,,,,0,0,0,0,,,,ja
 NO0370,mein Mann,mannen min,,,Norsk for deg,Lektion 2,0,0,,,,,0,0,0,0,,,,ja
@@ -416,7 +416,7 @@ NO0414,Umlautpunkt,tøddel,en,Substantiv,Norsk for deg,Lektion 2,0,0,,,,,0,0,0,0
 NO0415,sollen; werden,å skulle,,,Norsk for deg,Lektion 2,0,0,,,,,0,0,0,0,,,,ja
 NO0416,Danke schön.,Takk skal du ha.,,,Norsk for deg,Lektion 2,0,0,,,,,0,0,0,0,,,,ja
 NO0417,doppelt,dobbelt,,,Norsk for deg,Lektion 2,0,0,,,,,0,0,0,0,,,,ja
-NO0418,E-Mail-Adresse,e-postadresse,ei/en,Substantiv,Norsk for deg,Lektion 2,0,0,,,,,0,0,0,0,,,,ja
+NO0418,E-Mail-Adresse,e-postadresse,en/ei,Substantiv,Norsk for deg,Lektion 2,0,0,,,,,0,0,0,0,,,,ja
 NO0419,können,å kunne,,,Norsk for deg,Lektion 2,0,0,,,,,0,0,0,0,,,,ja
 NO0420,Kannst du ... ? / Können Sie ... ?,Kan du ...,,,Norsk for deg,Lektion 2,0,0,,,,,0,0,0,0,,,,ja
 NO0421,minus,minus,,,Norsk for deg,Lektion 2,0,0,,,,,0,0,0,0,,,,ja
@@ -442,7 +442,7 @@ NO0440,Wie steht's?,Hvordan står det til?,,,Norsk for deg,Lektion 2,0,0,,,,,0,0
 NO0441,sehr,veldig,,,Norsk for deg,Lektion 2,0,0,,,,,0,0,0,0,,,,ja
 NO0442,schlecht,dårlig,,,Norsk for deg,Lektion 2,0,0,,,,,0,0,0,0,,,,ja
 NO0443,fürchterlich,fryktelig,,,Norsk for deg,Lektion 2,0,0,,,,,0,0,0,0,,,,ja
-NO0444,Kopfschmerzen,hodepine,ei/en,Substantiv,Norsk for deg,Lektion 2,0,0,,,,,0,0,0,0,,,,ja
+NO0444,Kopfschmerzen,hodepine,en/ei,Substantiv,Norsk for deg,Lektion 2,0,0,,,,,0,0,0,0,,,,ja
 NO0445,lange,lenge,,,Norsk for deg,Lektion 2,0,0,,,,,0,0,0,0,,,,ja
 NO0446,hier: seit,siden,,,Norsk for deg,Lektion 2,0,0,,,,,0,0,0,0,,,,ja
 NO0447,Lange nicht gesehen!,Lenge siden sist!,,,Norsk for deg,Lektion 2,0,0,,,,,0,0,0,0,,,,ja

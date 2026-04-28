@@ -41,6 +41,14 @@ let decodedLegacyArticleCSV = try codec.decode(legacyArticleCSV)
 check(decodedLegacyArticleCSV[0].norwegian == "dag", "Legacy noun word should be stripped")
 check(decodedLegacyArticleCSV[0].article == "en", "Legacy noun article should be migrated")
 
+let legacyFeminineArticleCSV = [
+    "ID,Deutsch,Norwegisch,Wortart,Herkunft,Lektion,Level_Papa,Level_Mama,Zuletzt_Papa,Zuletzt_Mama,Letztes_Ergebnis_Papa,Letztes_Ergebnis_Mama,Richtig_Papa,Falsch_Papa,Richtig_Mama,Falsch_Mama,Beispielsatz_NO,Beispielsatz_DE,Notiz,Aktiv",
+    "NO1004,Frau,\"kvinne, ei\",Substantiv,Sonstige,,0,0,,,,,0,0,0,0,,,,ja"
+].joined(separator: "\n")
+let decodedLegacyFeminineArticleCSV = try codec.decode(legacyFeminineArticleCSV)
+check(decodedLegacyFeminineArticleCSV[0].norwegian == "kvinne", "Legacy feminine noun word should be stripped")
+check(decodedLegacyFeminineArticleCSV[0].article == "en/ei", "Legacy feminine noun article should normalize to en/ei")
+
 var entry = VocabularyEntry(
     id: "NO0001",
     german: "danke",

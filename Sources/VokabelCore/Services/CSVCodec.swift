@@ -37,7 +37,7 @@ public struct CSVCodec {
                 id: values.removeValue(forKey: "ID") ?? "",
                 german: values.removeValue(forKey: "Deutsch") ?? "",
                 norwegian: values.removeValue(forKey: "Norwegisch") ?? "",
-                article: values.removeValue(forKey: "Artikel") ?? "",
+                article: Self.normalizeArticleValue(values.removeValue(forKey: "Artikel") ?? ""),
                 partOfSpeech: values.removeValue(forKey: "Wortart") ?? "",
                 source: values.removeValue(forKey: "Herkunft") ?? "",
                 lesson: values.removeValue(forKey: "Lektion") ?? "",
@@ -185,8 +185,17 @@ public struct CSVCodec {
 
         var migrated = entry
         migrated.norwegian = String(word)
-        migrated.article = article
+        migrated.article = normalizeArticleValue(article)
         return migrated
+    }
+
+    private static func normalizeArticleValue(_ value: String) -> String {
+        switch value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "ei", "ei/en":
+            return "en/ei"
+        default:
+            return value.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
     }
 }
 

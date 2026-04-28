@@ -127,7 +127,7 @@ public struct TrainingEngine {
 
     private func makeArticleOptions(expectedArticle: String, entries: [VocabularyEntry]) -> [String] {
         guard !expectedArticle.isEmpty else { return [] }
-        let base = ["en", "ei", "et", "en/ei", "ei/en"]
+        let base = ["en", "et", "en/ei"]
         let dynamic = entries
             .map { cleanArticle($0.article) }
             .filter { !$0.isEmpty }

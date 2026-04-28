@@ -600,7 +600,7 @@ private struct TrainingView: View {
                                                     viewModel.chooseArticle(option)
                                                 }
                                             } label: {
-                                                ChoiceOptionLabel(
+                                                ArticleOptionLabel(
                                                     option: option,
                                                     isSelected: viewModel.selectedArticle == option
                                                 )
@@ -608,7 +608,7 @@ private struct TrainingView: View {
                                             .buttonStyle(.plain)
                                         }
                                     }
-                                    .frame(maxWidth: 150)
+                                    .frame(width: 88)
 
                                     VStack(alignment: .leading, spacing: 8) {
                                         Text("Wort")
@@ -671,7 +671,7 @@ private struct TrainingView: View {
                                                 viewModel.chooseArticle(option)
                                             }
                                         } label: {
-                                            ChoiceOptionLabel(
+                                            ArticleOptionLabel(
                                                 option: option,
                                                 isSelected: viewModel.selectedArticle == option
                                             )
@@ -835,6 +835,28 @@ private struct ChoiceOptionLabel: View {
             .overlay(
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .stroke(isSelected ? NordicPalette.flagBlue : NordicPalette.flagBlue.opacity(0.9), lineWidth: 1.5)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+}
+
+private struct ArticleOptionLabel: View {
+    let option: String
+    var isSelected = false
+
+    var body: some View {
+        Text(option)
+            .font(.callout.weight(.semibold))
+            .foregroundStyle(isSelected ? Color.white : NordicPalette.flagBlue)
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 10)
+            .frame(maxWidth: .infinity, minHeight: 42)
+            .background(isSelected ? NordicPalette.flagBlue : NordicPalette.card)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .stroke(NordicPalette.flagBlue.opacity(isSelected ? 1 : 0.9), lineWidth: 1.5)
             )
             .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
