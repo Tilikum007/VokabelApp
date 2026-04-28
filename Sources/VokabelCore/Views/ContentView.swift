@@ -904,72 +904,131 @@ private struct SessionFinishedView: View {
     @ObservedObject var viewModel: TrainerViewModel
 
     var body: some View {
-        VStack(spacing: 14) {
-            Text(viewModel.sessionTotal == 0 ? "Keine Session" : "Fertig")
-                .font(.largeTitle.weight(.semibold))
-                .foregroundStyle(NordicPalette.ink)
-
-            if viewModel.sessionTotal > 0 {
-                Text("\(viewModel.correctCount) richtig, \(viewModel.wrongCount) falsch")
-                    .font(.headline)
-                    .foregroundStyle(NordicPalette.stone)
-
-                Text("\(successRate)%")
-                    .font(.system(size: 42, weight: .bold, design: .rounded))
-                    .foregroundStyle(successRate >= 80 ? NordicPalette.flagBlue : NordicPalette.flagRed)
+        ZStack(alignment: .top) {
+            if isPerfectSession {
+                FireworksView()
+                    .frame(height: 145)
+                    .allowsHitTesting(false)
             }
 
-            if let sessionMessage = viewModel.sessionMessage {
-                Text(sessionMessage)
-                    .font(.callout)
-                    .foregroundStyle(NordicPalette.stone)
-                    .multilineTextAlignment(.center)
-            }
+            VStack(spacing: 14) {
+                Text(viewModel.sessionTotal == 0 ? "Keine Session" : "Fertig")
+                    .font(.largeTitle.weight(.semibold))
+                    .foregroundStyle(NordicPalette.ink)
+                    .padding(.top, isPerfectSession ? 40 : 0)
 
-            if !viewModel.sessionMistakes.isEmpty {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Nochmal ansehen")
+                if viewModel.sessionTotal > 0 {
+                    Text("\(viewModel.correctCount) richtig, \(viewModel.wrongCount) falsch")
                         .font(.headline)
-                        .foregroundStyle(NordicPalette.ink)
-                    ForEach(viewModel.sessionMistakes.prefix(5)) { mistake in
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(mistake.prompt)
-                                .font(.callout.weight(.semibold))
-                            Text("Deine Antwort: \(mistake.givenAnswer)")
-                                .font(.caption)
-                            Text("Richtig: \(mistake.expectedAnswer)")
-                                .font(.caption.weight(.semibold))
-                        }
                         .foregroundStyle(NordicPalette.stone)
-                    }
+
+                    Text("\(successRate)%")
+                        .font(.system(size: 42, weight: .bold, design: .rounded))
+                        .foregroundStyle(successRate >= 80 ? NordicPalette.flagBlue : NordicPalette.flagRed)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
+
+                if let sessionMessage = viewModel.sessionMessage {
+                    Text(sessionMessage)
+                        .font(.callout)
+                        .foregroundStyle(NordicPalette.stone)
+                        .multilineTextAlignment(.center)
+                }
+
+                if !viewModel.sessionMistakes.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Nochmal ansehen")
+                            .font(.headline)
+                            .foregroundStyle(NordicPalette.ink)
+                        ForEach(viewModel.sessionMistakes.prefix(5)) { mistake in
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(mistake.prompt)
+                                    .font(.callout.weight(.semibold))
+                                Text("Deine Antwort: \(mistake.givenAnswer)")
+                                    .font(.caption)
+                                Text("Richtig: \(mistake.expectedAnswer)")
+                                    .font(.caption.weight(.semibold))
+                            }
+                            .foregroundStyle(NordicPalette.stone)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                    Button {
+                        viewModel.retryMistakes()
+                    } label: {
+                        Label("Fehler nochmal ueben", systemImage: "arrow.counterclockwise")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(NordicPalette.flagRed)
+                }
 
                 Button {
-                    viewModel.retryMistakes()
+                    viewModel.startSession()
                 } label: {
-                    Label("Fehler nochmal ueben", systemImage: "arrow.counterclockwise")
+                    Label("Neue Session", systemImage: "play.fill")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(NordicPalette.flagRed)
+                .tint(NordicPalette.flagBlue)
             }
-
-            Button {
-                viewModel.startSession()
-            } label: {
-                Label("Neue Session", systemImage: "play.fill")
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(NordicPalette.flagBlue)
+            .frame(maxWidth: .infinity)
         }
-        .frame(maxWidth: .infinity)
     }
 
     private var successRate: Int {
         guard viewModel.sessionTotal > 0 else { return 0 }
         return Int((Double(viewModel.correctCount) / Double(viewModel.sessionTotal) * 100).rounded())
+    }
+
+    private var isPerfectSession: Bool {
+        viewModel.sessionTotal > 0 && viewModel.correctCount == viewModel.sessionTotal && viewModel.wrongCount == 0
+    }
+}
+
+private struct FireworksView: View {
+    @State private var animate = false
+
+    private let bursts: [(x: CGFloat, y: CGFloat, color: Color, delay: Double)] = [
+        (0.20, 0.40, NordicPalette.flagRed, 0.00),
+        (0.50, 0.20, NordicPalette.flagBlue, 0.18),
+        (0.78, 0.42, NordicPalette.gold, 0.34)
+    ]
+
+    var body: some View {
+        GeometryReader { proxy in
+            ZStack {
+                ForEach(Array(bursts.enumerated()), id: \.offset) { _, burst in
+                    FireworkBurst(color: burst.color, animate: animate)
+                        .position(x: proxy.size.width * burst.x, y: proxy.size.height * burst.y)
+                        .animation(.easeOut(duration: 0.85).delay(burst.delay), value: animate)
+                }
+            }
+        }
+        .onAppear { animate = true }
+    }
+}
+
+private struct FireworkBurst: View {
+    let color: Color
+    let animate: Bool
+
+    var body: some View {
+        ZStack {
+            ForEach(0..<12, id: \.self) { index in
+                Capsule()
+                    .fill(color)
+                    .frame(width: 4, height: 16)
+                    .offset(y: animate ? -48 : -8)
+                    .rotationEffect(.degrees(Double(index) * 30))
+                    .opacity(animate ? 0 : 1)
+                    .scaleEffect(animate ? 0.65 : 1)
+            }
+            Circle()
+                .fill(color.opacity(0.18))
+                .frame(width: animate ? 110 : 8, height: animate ? 110 : 8)
+                .opacity(animate ? 0 : 1)
+        }
     }
 }
 
