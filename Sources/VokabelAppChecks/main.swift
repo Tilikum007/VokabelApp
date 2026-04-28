@@ -33,6 +33,14 @@ let decodedLegacyCSV = try codec.decode(legacyCSV)
 check(decodedLegacyCSV.count == 1, "Legacy CSV without article should decode")
 check(decodedLegacyCSV[0].article.isEmpty, "Legacy CSV should default article to empty")
 
+let legacyArticleCSV = [
+    "ID,Deutsch,Norwegisch,Wortart,Herkunft,Lektion,Level_Papa,Level_Mama,Zuletzt_Papa,Zuletzt_Mama,Letztes_Ergebnis_Papa,Letztes_Ergebnis_Mama,Richtig_Papa,Falsch_Papa,Richtig_Mama,Falsch_Mama,Beispielsatz_NO,Beispielsatz_DE,Notiz,Aktiv",
+    "NO1003,Tag,\"dag, en\",Substantiv,Sonstige,,0,0,,,,,0,0,0,0,,,,ja"
+].joined(separator: "\n")
+let decodedLegacyArticleCSV = try codec.decode(legacyArticleCSV)
+check(decodedLegacyArticleCSV[0].norwegian == "dag", "Legacy noun word should be stripped")
+check(decodedLegacyArticleCSV[0].article == "en", "Legacy noun article should be migrated")
+
 var entry = VocabularyEntry(
     id: "NO0001",
     german: "danke",

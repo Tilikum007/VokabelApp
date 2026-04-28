@@ -33,7 +33,7 @@ public struct CSVCodec {
             }
 
             var values = Dictionary(uniqueKeysWithValues: zip(normalizedHeader, row))
-            return VocabularyEntry(
+            let entry = VocabularyEntry(
                 id: values.removeValue(forKey: "ID") ?? "",
                 german: values.removeValue(forKey: "Deutsch") ?? "",
                 norwegian: values.removeValue(forKey: "Norwegisch") ?? "",
@@ -56,6 +56,7 @@ public struct CSVCodec {
                 note: values.removeValue(forKey: "Notiz") ?? "",
                 active: values.removeValue(forKey: "Aktiv") ?? "ja"
             )
+            return Self.separateLegacyArticle(in: entry)
         }
     }
 
@@ -164,5 +165,33 @@ public struct CSVCodec {
 
     private static func encodeLevel(_ value: Double) -> String {
         value.rounded() == value ? String(Int(value)) : String(value)
+    }
+
+    private static func separateLegacyArticle(in entry: VocabularyEntry) -> VocabularyEntry {
+        guard entry.article.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return entry
+        }
+
+        let patterns = ["en/ei", "ei/en", "en", "ei", "et"]
+        let norwegian = entry.norwegian.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let article = patterns.first(where: { norwegian.localizedCaseInsensitiveCompareSuffix(", \($0)") }) else {
+            return entry
+        }
+
+        let suffixLength = article.count + 2
+        let wordEnd = norwegian.index(norwegian.endIndex, offsetBy: -suffixLength)
+        let word = norwegian[..<wordEnd].trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !word.isEmpty else { return entry }
+
+        var migrated = entry
+        migrated.norwegian = String(word)
+        migrated.article = article
+        return migrated
+    }
+}
+
+private extension String {
+    func localizedCaseInsensitiveCompareSuffix(_ suffix: String) -> Bool {
+        lowercased().hasSuffix(suffix.lowercased())
     }
 }

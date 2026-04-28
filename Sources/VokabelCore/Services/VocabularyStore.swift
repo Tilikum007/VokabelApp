@@ -35,6 +35,7 @@ public final class VocabularyStore: ObservableObject {
             catalogEntries = decoded.map(\.strippingProgress)
             knownProgressEvents = loadCachedEvents()
             rebuildEntries()
+            try? persistCatalog()
             setSyncMessage("Lokale Daten geladen", result: .success)
             return
         }
