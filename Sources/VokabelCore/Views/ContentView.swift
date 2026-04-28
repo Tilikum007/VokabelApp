@@ -12,7 +12,7 @@ public struct ContentView: View {
     @State private var showsWhatsNewPopup = false
     @State private var didPresentWelcome = false
 
-    private static let whatsNewDefaultsKey = "de.papa.vokabelapp.whatsNew.focused-training-2026-04-28"
+    private static let whatsNewDefaultsKey = "de.papa.vokabelapp.whatsNew.focused-training-2026-04-28-v2"
 
     public init(viewModel: TrainerViewModel) {
         self.viewModel = viewModel
@@ -58,14 +58,15 @@ public struct ContentView: View {
             }
         }
         .platformContentFrame()
+        .onAppear {
+            presentWhatsNewIfNeeded()
+        }
         .task {
             await viewModel.load()
             guard !didPresentWelcome else { return }
             didPresentWelcome = true
-            if !UserDefaults.standard.bool(forKey: Self.whatsNewDefaultsKey) {
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.78)) {
-                    showsWhatsNewPopup = true
-                }
+            guard UserDefaults.standard.bool(forKey: Self.whatsNewDefaultsKey) else {
+                presentWhatsNewIfNeeded()
                 return
             }
             withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
@@ -75,6 +76,14 @@ public struct ContentView: View {
             withAnimation(.easeOut(duration: 0.22)) {
                 showsWelcomePopup = false
             }
+        }
+    }
+
+    private func presentWhatsNewIfNeeded() {
+        guard !UserDefaults.standard.bool(forKey: Self.whatsNewDefaultsKey), !showsWhatsNewPopup else { return }
+        showsWelcomePopup = false
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.78)) {
+            showsWhatsNewPopup = true
         }
     }
 }
