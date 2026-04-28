@@ -50,6 +50,7 @@ public struct VocabularyEntry: Identifiable, Equatable {
     public var id: String
     public var german: String
     public var norwegian: String
+    public var article: String
     public var partOfSpeech: String
     public var source: String
     public var lesson: String
@@ -72,6 +73,7 @@ public struct VocabularyEntry: Identifiable, Equatable {
         id: String,
         german: String,
         norwegian: String,
+        article: String = "",
         partOfSpeech: String,
         source: String,
         lesson: String,
@@ -93,6 +95,7 @@ public struct VocabularyEntry: Identifiable, Equatable {
         self.id = id
         self.german = german
         self.norwegian = norwegian
+        self.article = article
         self.partOfSpeech = partOfSpeech
         self.source = source
         self.lesson = lesson
@@ -141,6 +144,7 @@ public struct VocabularyEntry: Identifiable, Equatable {
             id: id,
             german: german,
             norwegian: norwegian,
+            article: article,
             partOfSpeech: partOfSpeech,
             source: source,
             lesson: lesson,
@@ -224,6 +228,17 @@ public struct TrainingQuestion: Identifiable, Equatable {
     public let entryID: String
     public let prompt: String
     public let expectedAnswer: String
+    public let expectedArticle: String
     public let direction: QuestionDirection
     public let options: [String]
+    public let articleOptions: [String]
+
+    public var requiresArticle: Bool {
+        direction == .germanToNorwegian && !expectedArticle.isEmpty
+    }
+
+    public var expectedDisplayAnswer: String {
+        guard requiresArticle else { return expectedAnswer }
+        return "\(expectedArticle) \(expectedAnswer)"
+    }
 }

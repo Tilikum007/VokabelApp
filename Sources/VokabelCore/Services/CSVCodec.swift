@@ -7,14 +7,14 @@ public enum CSVCodecError: Error, Equatable {
 
 public struct CSVCodec {
     public static let header = [
-        "ID", "Deutsch", "Norwegisch", "Wortart", "Herkunft", "Lektion",
+        "ID", "Deutsch", "Norwegisch", "Artikel", "Wortart", "Herkunft", "Lektion",
         "Level_Papa", "Level_Mama", "Zuletzt_Papa", "Zuletzt_Mama",
         "Letztes_Ergebnis_Papa", "Letztes_Ergebnis_Mama",
         "Richtig_Papa", "Falsch_Papa", "Richtig_Mama", "Falsch_Mama",
         "Beispielsatz_NO", "Beispielsatz_DE", "Notiz", "Aktiv"
     ]
     public static let catalogHeader = [
-        "ID", "Deutsch", "Norwegisch", "Wortart", "Herkunft", "Lektion",
+        "ID", "Deutsch", "Norwegisch", "Artikel", "Wortart", "Herkunft", "Lektion",
         "Beispielsatz_NO", "Beispielsatz_DE", "Notiz", "Aktiv"
     ]
 
@@ -37,6 +37,7 @@ public struct CSVCodec {
                 id: values.removeValue(forKey: "ID") ?? "",
                 german: values.removeValue(forKey: "Deutsch") ?? "",
                 norwegian: values.removeValue(forKey: "Norwegisch") ?? "",
+                article: values.removeValue(forKey: "Artikel") ?? "",
                 partOfSpeech: values.removeValue(forKey: "Wortart") ?? "",
                 source: values.removeValue(forKey: "Herkunft") ?? "",
                 lesson: values.removeValue(forKey: "Lektion") ?? "",
@@ -61,7 +62,7 @@ public struct CSVCodec {
     public func encode(_ entries: [VocabularyEntry]) -> String {
         let lines = [Self.header] + entries.map { entry in
             [
-                entry.id, entry.german, entry.norwegian, entry.partOfSpeech, entry.normalizedSource, entry.normalizedLesson,
+                entry.id, entry.german, entry.norwegian, entry.article, entry.partOfSpeech, entry.normalizedSource, entry.normalizedLesson,
                 Self.encodeLevel(entry.levelPapa), Self.encodeLevel(entry.levelMama), entry.lastPapa, entry.lastMama,
                 entry.lastResultPapa, entry.lastResultMama, String(entry.correctPapa), String(entry.wrongPapa),
                 String(entry.correctMama), String(entry.wrongMama), entry.exampleNO, entry.exampleDE,
@@ -78,6 +79,7 @@ public struct CSVCodec {
                 entry.id,
                 entry.german,
                 entry.norwegian,
+                entry.article,
                 entry.partOfSpeech,
                 entry.normalizedSource,
                 entry.normalizedLesson,

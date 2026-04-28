@@ -11,17 +11,27 @@ let engine = TrainingEngine()
 check(engine.grade(answer: "takk", expected: "takk") == .correct, "Expected exact answer to be correct")
 check(engine.grade(answer: "tak", expected: "takk") == .almost, "Expected near answer to be almost correct")
 check(engine.grade(answer: "hund", expected: "takk") == .wrong, "Expected unrelated answer to be wrong")
+check(engine.grade(answer: "bord", expected: "bord", articleAnswer: "et", expectedArticle: "et") == .correct, "Expected noun word and article to be correct")
+check(engine.grade(answer: "bord", expected: "bord", articleAnswer: "en", expectedArticle: "et") == .wrong, "Expected wrong noun article to be wrong")
 
 let codec = CSVCodec()
 let crlf = String(UnicodeScalar(13)) + String(UnicodeScalar(10))
 let csvWithCRLF = [
-    "ID,Deutsch,Norwegisch,Wortart,Herkunft,Lektion,Level_Papa,Level_Mama,Zuletzt_Papa,Zuletzt_Mama,Letztes_Ergebnis_Papa,Letztes_Ergebnis_Mama,Richtig_Papa,Falsch_Papa,Richtig_Mama,Falsch_Mama,Beispielsatz_NO,Beispielsatz_DE,Notiz,Aktiv",
-    "NO1000,ja,ja,,Sonstige; Norsk for deg,Lektion 1,0,0,,,,,0,0,0,0,,,,ja",
-    "NO1001,nein,nei,,Norsk for deg,Lektion 2,0,0,,,,,0,0,0,0,,,,ja"
+    "ID,Deutsch,Norwegisch,Artikel,Wortart,Herkunft,Lektion,Level_Papa,Level_Mama,Zuletzt_Papa,Zuletzt_Mama,Letztes_Ergebnis_Papa,Letztes_Ergebnis_Mama,Richtig_Papa,Falsch_Papa,Richtig_Mama,Falsch_Mama,Beispielsatz_NO,Beispielsatz_DE,Notiz,Aktiv",
+    "NO1000,ja,ja,,,Sonstige; Norsk for deg,Lektion 1,0,0,,,,,0,0,0,0,,,,ja",
+    "NO1001,nein,nei,,,Norsk for deg,Lektion 2,0,0,,,,,0,0,0,0,,,,ja"
 ].joined(separator: crlf)
 let decodedCSV = try codec.decode(csvWithCRLF)
 check(decodedCSV.count == 2, "CRLF CSV should decode into two rows")
 check(decodedCSV[0].sourceTokens == ["Sonstige", "Norsk for deg"], "Source tokens should split semicolon-separated sources")
+
+let legacyCSV = [
+    "ID,Deutsch,Norwegisch,Wortart,Herkunft,Lektion,Level_Papa,Level_Mama,Zuletzt_Papa,Zuletzt_Mama,Letztes_Ergebnis_Papa,Letztes_Ergebnis_Mama,Richtig_Papa,Falsch_Papa,Richtig_Mama,Falsch_Mama,Beispielsatz_NO,Beispielsatz_DE,Notiz,Aktiv",
+    "NO1002,Tisch,bord,,Sonstige,,0,0,,,,,0,0,0,0,,,,ja"
+].joined(separator: "\n")
+let decodedLegacyCSV = try codec.decode(legacyCSV)
+check(decodedLegacyCSV.count == 1, "Legacy CSV without article should decode")
+check(decodedLegacyCSV[0].article.isEmpty, "Legacy CSV should default article to empty")
 
 var entry = VocabularyEntry(
     id: "NO0001",
@@ -90,6 +100,36 @@ let base = VocabularyEntry(
     note: "",
     active: "ja"
 )
+
+let noun = VocabularyEntry(
+    id: "NO2001",
+    german: "Tisch",
+    norwegian: "bord",
+    article: "et",
+    partOfSpeech: "Substantiv",
+    source: "Norsk for deg",
+    lesson: "Lektion 1",
+    levelPapa: 1,
+    levelMama: 0,
+    lastPapa: "",
+    lastMama: "",
+    lastResultPapa: "",
+    lastResultMama: "",
+    correctPapa: 0,
+    wrongPapa: 0,
+    correctMama: 0,
+    wrongMama: 0,
+    exampleNO: "",
+    exampleDE: "",
+    note: "",
+    active: "ja"
+)
+
+let nounQuestion = engine.makeQuestion(entry: noun, direction: .germanToNorwegian, allEntries: [base, noun], optionsCount: 5)
+check(nounQuestion.requiresArticle, "Norwegian noun answers should require an article")
+check(nounQuestion.expectedAnswer == "bord", "Norwegian noun answer should contain only the word")
+check(nounQuestion.expectedArticle == "et", "Norwegian noun article should be separate")
+check(nounQuestion.articleOptions.contains("et"), "Article options should contain the expected article")
 
 let catalogCSV = codec.encodeCatalog([base])
 let catalogDecoded = try codec.decode(catalogCSV)

@@ -586,19 +586,102 @@ private struct TrainingView: View {
                         .minimumScaleFactor(0.65)
 
                     if viewModel.answerMode == .choice {
-                        VStack(spacing: 10) {
-                            ForEach(question.options, id: \.self) { option in
+                        if question.requiresArticle {
+                            VStack(spacing: 12) {
+                                HStack(alignment: .top, spacing: 10) {
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        Text("Artikel")
+                                            .font(.caption.weight(.semibold))
+                                            .foregroundStyle(NordicPalette.stone)
+
+                                        ForEach(question.articleOptions, id: \.self) { option in
+                                            Button {
+                                                withAnimation(.spring(response: 0.34, dampingFraction: 0.72)) {
+                                                    viewModel.chooseArticle(option)
+                                                }
+                                            } label: {
+                                                ChoiceOptionLabel(
+                                                    option: option,
+                                                    isSelected: viewModel.selectedArticle == option
+                                                )
+                                            }
+                                            .buttonStyle(.plain)
+                                        }
+                                    }
+                                    .frame(maxWidth: 150)
+
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        Text("Wort")
+                                            .font(.caption.weight(.semibold))
+                                            .foregroundStyle(NordicPalette.stone)
+
+                                        ForEach(question.options, id: \.self) { option in
+                                            Button {
+                                                withAnimation(.spring(response: 0.34, dampingFraction: 0.72)) {
+                                                    viewModel.chooseWord(option)
+                                                }
+                                            } label: {
+                                                ChoiceOptionLabel(
+                                                    option: option,
+                                                    isSelected: viewModel.selectedChoice == option
+                                                )
+                                            }
+                                            .buttonStyle(.plain)
+                                        }
+                                    }
+                                }
+
                                 Button {
                                     withAnimation(.spring(response: 0.34, dampingFraction: 0.72)) {
-                                        viewModel.choose(option)
+                                        viewModel.submitChoiceAnswer()
                                     }
                                 } label: {
-                                    ChoiceOptionLabel(option: option)
+                                    Label("Antwort pruefen", systemImage: "checkmark")
+                                        .frame(maxWidth: .infinity)
                                 }
-                                .buttonStyle(.plain)
+                                .buttonStyle(.borderedProminent)
+                                .tint(NordicPalette.flagBlue)
+                                .disabled(viewModel.selectedArticle.isEmpty || viewModel.selectedChoice.isEmpty)
+                            }
+                        } else {
+                            VStack(spacing: 10) {
+                                ForEach(question.options, id: \.self) { option in
+                                    Button {
+                                        withAnimation(.spring(response: 0.34, dampingFraction: 0.72)) {
+                                            viewModel.choose(option)
+                                        }
+                                    } label: {
+                                        ChoiceOptionLabel(option: option)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
                             }
                         }
                     } else {
+                        if question.requiresArticle {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Artikel")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(NordicPalette.stone)
+
+                                HStack(spacing: 8) {
+                                    ForEach(question.articleOptions, id: \.self) { option in
+                                        Button {
+                                            withAnimation(.spring(response: 0.34, dampingFraction: 0.72)) {
+                                                viewModel.chooseArticle(option)
+                                            }
+                                        } label: {
+                                            ChoiceOptionLabel(
+                                                option: option,
+                                                isSelected: viewModel.selectedArticle == option
+                                            )
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                }
+                            }
+                        }
+
                         TextField("Antwort", text: $viewModel.answerText)
                             .textFieldStyle(.roundedBorder)
                             .font(.title3)
@@ -614,6 +697,7 @@ private struct TrainingView: View {
                         }
                         .buttonStyle(.borderedProminent)
                         .tint(NordicPalette.flagRed)
+                        .disabled(question.requiresArticle && viewModel.selectedArticle.isEmpty)
                     }
                 }
                 .frame(maxWidth: .infinity)
@@ -735,21 +819,22 @@ private struct ProgressPill: View {
 
 private struct ChoiceOptionLabel: View {
     let option: String
+    var isSelected = false
 
     var body: some View {
         Text(option)
             .font(.body.weight(.semibold))
-            .foregroundStyle(NordicPalette.flagBlue)
+            .foregroundStyle(isSelected ? Color.white : NordicPalette.flagBlue)
             .multilineTextAlignment(.center)
             .lineLimit(2)
             .minimumScaleFactor(0.78)
             .padding(.horizontal, 14)
             .padding(.vertical, 13)
             .frame(maxWidth: .infinity, minHeight: 48)
-            .background(NordicPalette.card)
+            .background(isSelected ? NordicPalette.flagBlue : NordicPalette.card)
             .overlay(
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .stroke(NordicPalette.flagBlue, lineWidth: 1.5)
+                    .stroke(isSelected ? NordicPalette.flagBlue : NordicPalette.flagBlue.opacity(0.9), lineWidth: 1.5)
             )
             .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
     }

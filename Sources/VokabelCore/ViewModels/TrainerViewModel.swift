@@ -16,6 +16,8 @@ public final class TrainerViewModel: ObservableObject {
     }
     @Published public var currentQuestion: TrainingQuestion?
     @Published public var answerText = ""
+    @Published public var selectedArticle = ""
+    @Published public var selectedChoice = ""
     @Published public var feedback: FeedbackState?
     @Published public var sessionSize = 10
     @Published public var sessionTotal = 0
@@ -138,12 +140,48 @@ public final class TrainerViewModel: ObservableObject {
 
     public func submitTypedAnswer() {
         guard let question = currentQuestion else { return }
-        submit(grade: engine.grade(answer: answerText, expected: question.expectedAnswer))
+        let grade: AnswerGrade
+        if question.requiresArticle {
+            grade = engine.grade(
+                answer: answerText,
+                expected: question.expectedAnswer,
+                articleAnswer: selectedArticle,
+                expectedArticle: question.expectedArticle
+            )
+        } else {
+            grade = engine.grade(answer: answerText, expected: question.expectedAnswer)
+        }
+        submit(grade: grade)
     }
 
     public func choose(_ option: String) {
         guard let question = currentQuestion else { return }
+        guard !question.requiresArticle else {
+            chooseWord(option)
+            return
+        }
         submit(grade: option == question.expectedAnswer ? .correct : .wrong)
+    }
+
+    public func chooseWord(_ option: String) {
+        selectedChoice = option
+    }
+
+    public func chooseArticle(_ option: String) {
+        selectedArticle = option
+    }
+
+    public func submitChoiceAnswer() {
+        guard let question = currentQuestion else { return }
+        guard question.requiresArticle else {
+            guard !selectedChoice.isEmpty else { return }
+            submit(grade: selectedChoice == question.expectedAnswer ? .correct : .wrong)
+            return
+        }
+        guard !selectedChoice.isEmpty, !selectedArticle.isEmpty else { return }
+        let wordCorrect = selectedChoice == question.expectedAnswer
+        let articleCorrect = engine.gradeArticle(answer: selectedArticle, expected: question.expectedArticle) == .correct
+        submit(grade: wordCorrect && articleCorrect ? .correct : .wrong)
     }
 
     private func submit(grade: AnswerGrade) {
@@ -155,7 +193,7 @@ public final class TrainerViewModel: ObservableObject {
             learner: learner,
             correctLevelDelta: correctLevelDelta
         )
-        feedback = FeedbackState(grade: grade, expectedAnswer: question.expectedAnswer)
+        feedback = FeedbackState(grade: grade, expectedAnswer: question.expectedDisplayAnswer)
         if grade == .correct {
             correctCount += 1
         } else {
@@ -167,6 +205,8 @@ public final class TrainerViewModel: ObservableObject {
 
     private func nextQuestion() {
         answerText = ""
+        selectedArticle = ""
+        selectedChoice = ""
         guard !session.isEmpty else {
             currentQuestion = nil
             remaining = 0

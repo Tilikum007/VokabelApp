@@ -47,7 +47,8 @@ public struct TrainingEngine {
         optionsCount: Int
     ) -> TrainingQuestion {
         let expected = direction == .germanToNorwegian ? entry.norwegian : entry.german
-        let prompt = direction == .germanToNorwegian ? entry.german : entry.norwegian
+        let expectedArticle = direction == .germanToNorwegian ? cleanArticle(entry.article) : ""
+        let prompt = direction == .germanToNorwegian ? entry.german : norwegianPrompt(for: entry)
         let distractors = allEntries
             .filter { $0.id != entry.id && $0.isActive }
             .map { direction == .germanToNorwegian ? $0.norwegian : $0.german }
@@ -55,13 +56,16 @@ public struct TrainingEngine {
             .uniqued()
             .shuffled()
             .prefix(max(0, optionsCount - 1))
+        let articleOptions = makeArticleOptions(expectedArticle: expectedArticle, entries: allEntries)
 
         return TrainingQuestion(
             entryID: entry.id,
             prompt: prompt,
             expectedAnswer: expected,
+            expectedArticle: expectedArticle,
             direction: direction,
-            options: ([expected] + distractors).shuffled()
+            options: ([expected] + distractors).shuffled(),
+            articleOptions: articleOptions
         )
     }
 
@@ -77,6 +81,28 @@ public struct TrainingEngine {
         return levenshtein(normalizedAnswer, normalizedExpected) <= 2 ? .almost : .wrong
     }
 
+    public func gradeArticle(answer: String, expected: String) -> AnswerGrade {
+        let normalizedAnswer = normalizeArticle(answer)
+        let normalizedExpected = normalizeArticle(expected)
+        guard !normalizedExpected.isEmpty else { return .correct }
+        return normalizedAnswer == normalizedExpected ? .correct : .wrong
+    }
+
+    public func grade(answer: String, expected: String, articleAnswer: String, expectedArticle: String) -> AnswerGrade {
+        let wordGrade = grade(answer: answer, expected: expected)
+        let articleGrade = gradeArticle(answer: articleAnswer, expected: expectedArticle)
+
+        if wordGrade == .correct && articleGrade == .correct {
+            return .correct
+        }
+
+        if wordGrade == .wrong || articleGrade == .wrong {
+            return .wrong
+        }
+
+        return .almost
+    }
+
     private func score(_ entry: VocabularyEntry, learner: Learner) -> Double {
         let last = learner == .papa ? entry.lastPapa : entry.lastMama
         let staleBonus = last.isEmpty ? -10.0 : 0.0
@@ -87,6 +113,37 @@ public struct TrainingEngine {
         value.trimmingCharacters(in: .whitespacesAndNewlines)
             .lowercased()
             .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+    }
+
+    private func cleanArticle(_ value: String) -> String {
+        value.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func normalizeArticle(_ value: String) -> String {
+        cleanArticle(value)
+            .lowercased()
+            .replacingOccurrences(of: " ", with: "")
+    }
+
+    private func makeArticleOptions(expectedArticle: String, entries: [VocabularyEntry]) -> [String] {
+        guard !expectedArticle.isEmpty else { return [] }
+        let base = ["en", "ei", "et", "en/ei", "ei/en"]
+        let dynamic = entries
+            .map { cleanArticle($0.article) }
+            .filter { !$0.isEmpty }
+        return ([expectedArticle] + base + dynamic)
+            .uniqued()
+            .sorted { left, right in
+                if left == expectedArticle { return true }
+                if right == expectedArticle { return false }
+                return left < right
+            }
+    }
+
+    private func norwegianPrompt(for entry: VocabularyEntry) -> String {
+        let article = cleanArticle(entry.article)
+        guard !article.isEmpty else { return entry.norwegian }
+        return "\(article) \(entry.norwegian)"
     }
 
     private func levenshtein(_ a: String, _ b: String) -> Int {
