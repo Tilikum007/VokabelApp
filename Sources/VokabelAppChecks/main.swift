@@ -147,6 +147,17 @@ check(nounQuestion.expectedAnswer == "bord", "Norwegian noun answer should conta
 check(nounQuestion.expectedArticle == "et", "Norwegian noun article should be separate")
 check(nounQuestion.articleOptions.contains("et"), "Article options should contain the expected article")
 
+let nounDistractorEntries = [
+    noun,
+    VocabularyEntry(id: "NO2002", german: "Stuhl", norwegian: "stol", article: "en", partOfSpeech: "Substantiv", source: "", lesson: "", levelPapa: 0, levelMama: 0, lastPapa: "", lastMama: "", lastResultPapa: "", lastResultMama: "", correctPapa: 0, wrongPapa: 0, correctMama: 0, wrongMama: 0, exampleNO: "", exampleDE: "", note: "", active: "ja"),
+    VocabularyEntry(id: "NO2003", german: "Haus", norwegian: "hus", article: "et", partOfSpeech: "Substantiv", source: "", lesson: "", levelPapa: 0, levelMama: 0, lastPapa: "", lastMama: "", lastResultPapa: "", lastResultMama: "", correctPapa: 0, wrongPapa: 0, correctMama: 0, wrongMama: 0, exampleNO: "", exampleDE: "", note: "", active: "ja"),
+    VocabularyEntry(id: "NO2004", german: "Auto", norwegian: "bil", article: "en", partOfSpeech: "Substantiv", source: "", lesson: "", levelPapa: 0, levelMama: 0, lastPapa: "", lastMama: "", lastResultPapa: "", lastResultMama: "", correctPapa: 0, wrongPapa: 0, correctMama: 0, wrongMama: 0, exampleNO: "", exampleDE: "", note: "", active: "ja"),
+    VocabularyEntry(id: "NO2005", german: "Buch", norwegian: "bok", article: "en/ei", partOfSpeech: "Substantiv", source: "", lesson: "", levelPapa: 0, levelMama: 0, lastPapa: "", lastMama: "", lastResultPapa: "", lastResultMama: "", correctPapa: 0, wrongPapa: 0, correctMama: 0, wrongMama: 0, exampleNO: "", exampleDE: "", note: "", active: "ja"),
+    VocabularyEntry(id: "NO2006", german: "gehen", norwegian: "gå", partOfSpeech: "Verb", source: "", lesson: "", levelPapa: 0, levelMama: 0, lastPapa: "", lastMama: "", lastResultPapa: "", lastResultMama: "", correctPapa: 0, wrongPapa: 0, correctMama: 0, wrongMama: 0, exampleNO: "", exampleDE: "", note: "", active: "ja")
+]
+let nounChoiceQuestion = engine.makeQuestion(entry: noun, direction: .germanToNorwegian, allEntries: nounDistractorEntries, optionsCount: 5)
+check(!nounChoiceQuestion.options.contains("gå"), "Noun choice distractors should prefer nouns when enough noun options exist")
+
 let articleQuestion = engine.makeQuestion(entry: noun, direction: .germanToNorwegian, allEntries: [base, noun], optionsCount: 5, focus: .articles)
 check(articleQuestion.asksOnlyArticle, "Article training should ask only for the article")
 check(articleQuestion.expectedAnswer == "et", "Article training expected answer should be the article")

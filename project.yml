@@ -10,10 +10,6 @@ settings:
     DEVELOPMENT_TEAM: Y3B24T9MUD
     MARKETING_VERSION: "0.2.0"
     CURRENT_PROJECT_VERSION: "2"
-packages:
-  GoogleSignIn:
-    url: https://github.com/google/GoogleSignIn-iOS
-    from: 9.0.0
 targets:
   VokabelCore:
     type: framework
@@ -22,11 +18,6 @@ targets:
       - Sources/VokabelCore
     resources:
       - Sources/VokabelCore/Resources
-    dependencies:
-      - package: GoogleSignIn
-        product: GoogleSignIn
-      - package: GoogleSignIn
-        product: GoogleSignInSwift
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: de.papa.vokabelapp.core

@@ -26,31 +26,36 @@ xcodegen generate
 open VokabelApp.xcodeproj
 ```
 
-## Google OAuth
+## Backend
 
-1. Create or open a Google Cloud project.
-2. Enable the Google Drive API.
-3. Configure the OAuth consent screen.
-4. Create an OAuth client for iOS/macOS.
-5. Add this scope:
+The app syncs vocabulary through the backend contract in:
+
+`Docs/BACKEND_CONTRACT.md`
+
+Set the backend URL in `App/Info.plist`:
+
+```xml
+<key>VokabelBackendBaseURL</key>
+<string>https://example.com</string>
+```
+
+For local development, the app also accepts:
+
+- environment variable `VOKABEL_BACKEND_BASE_URL`
+- `UserDefaults` key `vokabelapp.backendBaseURL`
+
+Google Drive sync remains in the source as a legacy migration path, but the visible app sync actions use the backend.
+
+## Local Backend
+
+Run the reference backend locally:
+
+```sh
+python3 Backend/vokabel_backend.py --host 127.0.0.1 --port 8080
+```
+
+Then configure the app with:
 
 ```text
-https://www.googleapis.com/auth/drive
+VOKABEL_BACKEND_BASE_URL=http://127.0.0.1:8080
 ```
-
-6. Replace the placeholders in `App/Info.plist`:
-
-```xml
-<key>GIDClientID</key>
-<string>...</string>
-```
-
-and:
-
-```xml
-<string>com.googleusercontent.apps...</string>
-```
-
-7. In Google Drive, verify that `MASTER_vokabelheft_norwegisch.csv` is reachable by the signed-in account. The app uses the Drive scope so it can download and overwrite this existing master CSV.
-
-Until the OAuth placeholders are replaced, the app builds and runs locally but Google sign-in cannot complete.

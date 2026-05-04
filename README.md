@@ -6,7 +6,7 @@ The app is currently structured as:
 
 - Swift Package for local development and command-line verification.
 - `project.yml` for generating a signed iOS/iPadOS/macOS Xcode app with XcodeGen.
-- `App/Info.plist` template for Google Sign-In configuration.
+- `App/Info.plist` template for backend configuration.
 
 ## Training Rules
 
@@ -24,52 +24,35 @@ The app is currently structured as:
 - macOS uses typed answers.
 - iOS and iPadOS use five answer options and one vocabulary item per round.
 
-## Google Drive
+## Backend Sync
 
-The master file is configured as:
+The canonical master file is no longer owned by Google Drive. The backend owns:
 
 `MASTER_vokabelheft_norwegisch.csv`
 
-Drive file ID:
+The app talks to the backend through:
+
+- `POST /v1/sync`
+- `POST /v1/vocabulary/updates`
+
+Configure the backend base URL with one of:
+
+- `VokabelBackendBaseURL` in `App/Info.plist`
+- `VOKABEL_BACKEND_BASE_URL` in the process environment
+- `UserDefaults` key `vokabelapp.backendBaseURL`
+
+The app-side REST client is `VocabularyBackendClient`. The backend contract is documented in:
+
+`Docs/BACKEND_CONTRACT.md`
+
+The repository also contains a small standard-library reference backend:
+
+`Backend/vokabel_backend.py`
+
+Google Drive support remains in the codebase as a legacy migration path, but app sync buttons now use the backend client.
+
+## Legacy Google Drive
+
+The previous Drive master file ID was:
 
 `1JlZTzcUYnJAu3piX0oVCtxmoOI8Bcgy1`
-
-The REST client is present in `GoogleDriveClient`. A production build still needs Google OAuth client configuration for Apple platforms before sync buttons should be exposed in the UI.
-
-### OAuth Recommendation
-
-Use Google Sign-In for iOS and macOS via Swift Package Manager:
-
-`https://github.com/google/GoogleSignIn-iOS`
-
-Recommended package products:
-
-- `GoogleSignIn`
-- `GoogleSignInSwift`
-
-The optional adapter is already present in:
-
-`Sources/VokabelCore/Services/GoogleSignInSessionProvider.swift`
-
-Recommended Drive scope:
-
-`https://www.googleapis.com/auth/drive`
-
-This keeps the app limited to files opened by or shared with the app instead of requesting unrestricted Drive access.
-
-Avoid `https://www.googleapis.com/auth/drive` for this app. It is broader than needed for a single vocabulary CSV and creates a heavier verification burden.
-
-### Remember Login
-
-The app includes a Keychain-backed `AuthCoordinator` and an "Anmeldung merken" toggle. The intended production flow is:
-
-1. Try `GoogleSignIn.restorePreviousSignIn()` on app start.
-2. If Google returns a valid session, pass the token into `AuthCoordinator.acceptGoogleSession(...)`.
-3. If "Anmeldung merken" is enabled, persist the session metadata in Keychain.
-4. On sign-out or when the toggle is disabled, clear the Keychain entry.
-
-Do not store Google passwords. The app should only store OAuth session data in Keychain.
-
-Template OAuth plist:
-
-`Sources/VokabelCore/Resources/GoogleOAuthConfig.example.plist`

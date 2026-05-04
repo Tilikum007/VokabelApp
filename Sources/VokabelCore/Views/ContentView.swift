@@ -7,12 +7,12 @@ import AppKit
 
 public struct ContentView: View {
     @ObservedObject var viewModel: TrainerViewModel
-    @State private var showsSettings = false
+    @State private var route: AppRoute = .home
     @State private var showsWelcomePopup = false
     @State private var showsWhatsNewPopup = false
     @State private var didPresentWelcome = false
 
-    private static let whatsNewDefaultsKey = "de.papa.vokabelapp.whatsNew.focused-training-2026-04-28-v2"
+    private static let whatsNewDefaultsKey = "de.papa.vokabelapp.whatsNew.backend-home-choice-groups-2026-05-04"
 
     public init(viewModel: TrainerViewModel) {
         self.viewModel = viewModel
@@ -22,19 +22,32 @@ public struct ContentView: View {
         ZStack {
             NordicPalette.snow.ignoresSafeArea()
             ScrollView {
-                if showsSettings {
-                    SettingsScreen(viewModel: viewModel) {
-                        showsSettings = false
+                Group {
+                    switch route {
+                    case .home:
+                        HomeScreen(
+                            viewModel: viewModel,
+                            showSettings: { route = .settings },
+                            startTraining: {
+                                viewModel.startSession()
+                                route = .training
+                            }
+                        )
+                    case .training:
+                        TrainingScreen(
+                            viewModel: viewModel,
+                            goHome: { route = .home },
+                            showSettings: { route = .settings }
+                        )
+                    case .settings:
+                        SettingsScreen(
+                            viewModel: viewModel,
+                            goHome: { route = .home }
+                        )
                     }
-                    .padding(24)
-                    .frame(maxWidth: 760)
-                } else {
-                    TrainingScreen(viewModel: viewModel) {
-                        showsSettings = true
-                    }
-                    .padding(24)
-                    .frame(maxWidth: 760)
                 }
+                .padding(24)
+                .frame(maxWidth: 760)
             }
         }
         .overlay {
@@ -88,16 +101,22 @@ public struct ContentView: View {
     }
 }
 
+private enum AppRoute {
+    case home
+    case training
+    case settings
+}
+
 private struct WhatsNewPopup: View {
     let dismiss: () -> Void
 
     private let items = [
-        ("textformat.abc", "Substantive fragen Wort und Artikel getrennt ab."),
-        ("slider.horizontal.3", "Neuer Fokus: Wortschatz oder nur Artikel trainieren."),
-        ("arrow.triangle.2.circlepath", "Schwache Vokabeln werden beim Start einer Session bevorzugt."),
-        ("list.bullet.clipboard", "Am Session-Ende gibt es eine Fehlerliste und direktes Wiederholen."),
-        ("quote.bubble", "Feedback zeigt jetzt Beispielsaetze, wenn sie vorhanden sind."),
-        ("checklist", "Master-Pruefung und Vokabel-Update-Status sind in den Einstellungen sichtbar.")
+        ("house", "Neue Startseite mit Titelbild, Lernenden-Auswahl und Trainingsart."),
+        ("gearshape", "Richtung, Antwortmodus, Trainingsart und Session-Groesse bleiben gespeichert."),
+        ("server.rack", "Vokabel-Updates und Fortschritt laufen jetzt ueber das Vokabel-Backend."),
+        ("text.badge.plus", "Neue Vokabeln werden im Backend gesucht und in den lokalen Katalog uebernommen."),
+        ("square.grid.2x2", "Auswahlantworten passen jetzt moeglichst zur gleichen Wortgruppe."),
+        ("arrow.left", "Training und Einstellungen fuehren jederzeit zur Startseite zurueck.")
     ]
 
     var body: some View {
@@ -141,25 +160,135 @@ private struct WhatsNewPopup: View {
         .frame(maxWidth: 420)
         .background(NordicPalette.card)
         .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .stroke(NordicPalette.flagBlue.opacity(0.24), lineWidth: 1)
         )
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         .shadow(color: .black.opacity(0.18), radius: 24, y: 10)
         .padding(24)
     }
 }
 
+private struct HomeScreen: View {
+    @ObservedObject var viewModel: TrainerViewModel
+    let showSettings: () -> Void
+    let startTraining: () -> Void
+
+    var body: some View {
+        VStack(spacing: 18) {
+            hero
+
+            VStack(alignment: .leading, spacing: 16) {
+                SectionTitle(title: "Start", systemImage: "house")
+
+                OptionGroup(title: "Lernende") {
+                    ForEach(Learner.allCases) { learner in
+                        OptionChip(
+                            title: learner.rawValue,
+                            isSelected: viewModel.learner == learner
+                        ) {
+                            viewModel.learner = learner
+                        }
+                    }
+                }
+
+                OptionGroup(title: "Training") {
+                    ForEach(TrainingFocus.allCases) { focus in
+                        OptionChip(
+                            title: focus.rawValue,
+                            isSelected: viewModel.trainingFocus == focus
+                        ) {
+                            viewModel.trainingFocus = focus
+                        }
+                    }
+                }
+
+                MenuSelectField(title: "Woerter", value: "\(viewModel.sessionSize) Woerter") {
+                    ForEach(viewModel.sessionSizeOptions, id: \.self) { size in
+                        Button("\(size) Woerter") {
+                            viewModel.sessionSize = size
+                        }
+                    }
+                }
+
+                HStack(spacing: 10) {
+                    Button(action: showSettings) {
+                        Label("Einstellungen", systemImage: "gearshape")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(NordicPalette.flagBlue)
+
+                    Button(action: startTraining) {
+                        Label("Training starten", systemImage: "play.fill")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(NordicPalette.flagBlue)
+                }
+            }
+            .sectionCard()
+        }
+    }
+
+    private var hero: some View {
+        ZStack(alignment: .bottomLeading) {
+            NordicPalette.flagBlue
+            Rectangle()
+                .fill(NordicPalette.flagRed)
+                .frame(width: 72)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+            VStack(spacing: 0) {
+                Rectangle()
+                    .fill(.white.opacity(0.95))
+                    .frame(height: 8)
+                Rectangle()
+                    .fill(NordicPalette.flagRed)
+                    .frame(height: 8)
+            }
+            .frame(maxHeight: .infinity, alignment: .top)
+
+            HStack(alignment: .bottom, spacing: 14) {
+                VStack(alignment: .leading, spacing: 8) {
+                    NorwegianFlag()
+                    Text("Norsk")
+                        .font(.system(size: 56, weight: .semibold, design: .serif))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+                    Text("Vokabeltraining")
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.86))
+                }
+                Spacer(minLength: 10)
+                BundledPNGImage(name: "cheer")
+                    .frame(width: 148, height: 142)
+                    .shadow(color: .black.opacity(0.18), radius: 12, y: 6)
+            }
+            .padding(22)
+        }
+        .frame(minHeight: 230)
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .shadow(color: NordicPalette.flagBlue.opacity(0.20), radius: 18, y: 8)
+    }
+}
+
 private struct TrainingScreen: View {
     @ObservedObject var viewModel: TrainerViewModel
+    let goHome: () -> Void
     let showSettings: () -> Void
 
     var body: some View {
         VStack(spacing: 14) {
-            TopBar(
-                title: "Norsk",
-                subtitle: "Vokabeltraining"
-            ) {
+            HStack(spacing: 10) {
+                Button(action: goHome) {
+                    IconOnlyActionLabel(title: "Startseite", systemImage: "house")
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Startseite")
+
+                Spacer(minLength: 8)
+
                 Button(action: showSettings) {
                     IconOnlyActionLabel(title: "Einstellungen", systemImage: "gearshape")
                 }
@@ -176,7 +305,7 @@ private struct TrainingScreen: View {
 
 private struct SettingsScreen: View {
     @ObservedObject var viewModel: TrainerViewModel
-    let goBack: () -> Void
+    let goHome: () -> Void
 
     var body: some View {
         VStack(spacing: 20) {
@@ -184,13 +313,13 @@ private struct SettingsScreen: View {
                 title: "Einstellungen",
                 subtitle: "Sync und Trainingsfilter"
             ) {
-                Button(action: goBack) {
-                    IconActionLabel(title: "Zurueck", systemImage: "chevron.left")
+                Button(action: goHome) {
+                    IconActionLabel(title: "Startseite", systemImage: "house")
                 }
                 .buttonStyle(.plain)
             }
 
-            LoginView(viewModel: viewModel, auth: viewModel.auth)
+            LoginView(viewModel: viewModel)
             SyncStatusView(store: viewModel.store)
             SettingsView(viewModel: viewModel)
             Spacer(minLength: 0)
@@ -268,34 +397,31 @@ private struct TrainingTitleBar<Action: View>: View {
 private struct LoginView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @ObservedObject var viewModel: TrainerViewModel
-    @ObservedObject var auth: AuthCoordinator
 
     var body: some View {
         VStack(spacing: 12) {
             if isCompact {
                 VStack(alignment: .leading, spacing: 10) {
                     accountLabel
-                    rememberToggle
                 }
             } else {
                 HStack {
                     accountLabel
                     Spacer()
-                    rememberToggle
                 }
             }
 
             if isCompact {
                 VStack(spacing: 8) {
-                    driveButtons
+                    syncButtons
                 }
             } else {
                 HStack {
-                    driveButtons
+                    syncButtons
                 }
             }
 
-            Text(auth.statusMessage)
+            Text(viewModel.store.lastSyncMessage)
                 .font(.footnote)
                 .foregroundStyle(NordicPalette.stone)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -312,72 +438,43 @@ private struct LoginView: View {
 
     private var accountLabel: some View {
         Label(
-            auth.isSignedIn ? auth.email : "Google Drive",
-            systemImage: auth.isSignedIn ? "person.crop.circle.fill" : "person.crop.circle"
+            "Vokabel-Backend",
+            systemImage: "server.rack"
         )
         .foregroundStyle(NordicPalette.ink)
         .lineLimit(1)
         .minimumScaleFactor(0.82)
     }
 
-    private var rememberToggle: some View {
-        Toggle("Anmeldung merken", isOn: Binding(
-            get: { auth.rememberLogin },
-            set: { auth.updateRememberLogin($0) }
-        ))
-        .toggleStyle(.switch)
-        .lineLimit(1)
-    }
-
     @ViewBuilder
-    private var driveButtons: some View {
-        if !auth.isSignedIn {
-            Button {
-                Task { await viewModel.signInAndSync() }
-            } label: {
-                DriveActionLabel(title: "Anmelden", systemImage: "person.badge.key", isCompact: isCompact)
-            }
-            .buttonStyle(.plain)
-            .disabled(auth.isSigningIn || viewModel.store.isSyncing)
-        }
-
+    private var syncButtons: some View {
         Button {
             Task { await viewModel.syncNow() }
         } label: {
-            DriveActionLabel(title: "Laden", systemImage: "icloud.and.arrow.down", isCompact: isCompact)
+            SyncActionLabel(title: "Laden", systemImage: "arrow.down.circle", isCompact: isCompact)
         }
         .buttonStyle(.plain)
-        .disabled(auth.isSigningIn || viewModel.store.isSyncing)
+        .disabled(viewModel.store.isSyncing)
 
         Button {
             Task { await viewModel.uploadNow() }
         } label: {
-            DriveActionLabel(title: "Sichern", systemImage: "icloud.and.arrow.up", isCompact: isCompact)
+            SyncActionLabel(title: "Sichern", systemImage: "arrow.triangle.2.circlepath", isCompact: isCompact)
         }
         .buttonStyle(.plain)
-        .disabled(auth.isSigningIn || viewModel.store.isSyncing)
+        .disabled(viewModel.store.isSyncing)
 
         Button {
             Task { await viewModel.checkVocabularyUpdates() }
         } label: {
-            DriveActionLabel(title: "Vokabel-Update suchen", systemImage: "text.badge.plus", isCompact: isCompact)
+            SyncActionLabel(title: "Vokabel-Update suchen", systemImage: "text.badge.plus", isCompact: isCompact)
         }
         .buttonStyle(.plain)
-        .disabled(auth.isSigningIn || viewModel.store.isSyncing)
-
-        if auth.isSignedIn {
-            Button(role: .destructive) {
-                auth.signOut()
-            } label: {
-                DriveActionLabel(title: "Abmelden", systemImage: "rectangle.portrait.and.arrow.right", isCompact: isCompact, isDestructive: true)
-            }
-            .buttonStyle(.plain)
-            .disabled(auth.isSigningIn || viewModel.store.isSyncing)
-        }
+        .disabled(viewModel.store.isSyncing)
     }
 }
 
-private struct DriveActionLabel: View {
+private struct SyncActionLabel: View {
     let title: String
     let systemImage: String
     let isCompact: Bool
@@ -476,29 +573,7 @@ private struct SettingsView: View {
             SectionTitle(title: "Einstellungen", systemImage: "slider.horizontal.3")
 
             VStack(spacing: 14) {
-                OptionGroup(title: "Lernende") {
-                    ForEach(Learner.allCases) { learner in
-                        OptionChip(
-                            title: learner.rawValue,
-                            isSelected: viewModel.learner == learner
-                        ) {
-                            viewModel.learner = learner
-                        }
-                    }
-                }
-
                 VStack(spacing: 10) {
-                    OptionGroup(title: "Training") {
-                        ForEach(TrainingFocus.allCases) { focus in
-                            OptionChip(
-                                title: focus.rawValue,
-                                isSelected: viewModel.trainingFocus == focus
-                            ) {
-                                viewModel.trainingFocus = focus
-                            }
-                        }
-                    }
-
                     OptionGroup(title: "Richtung") {
                         ForEach(DirectionMode.allCases) { mode in
                             OptionChip(

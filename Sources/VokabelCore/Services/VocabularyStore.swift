@@ -14,6 +14,7 @@ public final class VocabularyStore: ObservableObject {
     private let localFileName: String
     private let legacyDriveFileID: String
     private let driveClient: GoogleDriveClient
+    private let backendClient: VocabularyBackendClient
     private let progressFolderName = "VokabelAppProgress"
     private let remoteMasterName = "MASTER_vokabelheft_norwegisch.csv"
     private let archivedMasterName = "MASTER_vokabelheft_norwegisch_alt.csv"
@@ -22,10 +23,16 @@ public final class VocabularyStore: ObservableObject {
     private var catalogEntries: [VocabularyEntry] = []
     private var knownProgressEvents: [ProgressEvent] = []
 
-    public init(localFileName: String, driveFileID: String, driveClient: GoogleDriveClient = GoogleDriveClient()) {
+    public init(
+        localFileName: String,
+        driveFileID: String,
+        driveClient: GoogleDriveClient = GoogleDriveClient(),
+        backendClient: VocabularyBackendClient = VocabularyBackendClient()
+    ) {
         self.localFileName = localFileName
         self.legacyDriveFileID = driveFileID
         self.driveClient = driveClient
+        self.backendClient = backendClient
         self.deviceID = Self.resolveDeviceID()
     }
 
@@ -106,6 +113,78 @@ public final class VocabularyStore: ObservableObject {
             setSyncMessage("\(messageParts.joined(separator: ", ")) uebernommen", result: .success)
         } catch {
             setSyncMessage("Vokabel-Update fehlgeschlagen: \(error.localizedDescription)", result: .failure)
+        }
+    }
+
+    public func syncWithBackend() async {
+        isSyncing = true
+        setSyncMessage("Synchronisiere mit Backend ...", result: .working)
+        defer { isSyncing = false }
+
+        do {
+            let response = try await backendClient.sync(request: BackendSyncRequest(
+                deviceID: deviceID,
+                knownCatalogEntryIDs: catalogEntries.map(\.id),
+                progressEvents: knownProgressEvents
+            ))
+
+            try applyBackendCatalogCSV(
+                response.catalogCSV,
+                newVocabularyCount: response.newVocabularyCount,
+                correctedVocabularyCount: response.correctedVocabularyCount
+            )
+            knownProgressEvents = deduplicateEvents(response.progressEvents + knownProgressEvents)
+            for learner in Learner.allCases {
+                try persistLocalEvents(knownProgressEvents.filter { $0.learner == learner }, for: learner)
+            }
+            rebuildEntries()
+            try persistCatalog()
+            try persistProgressCache()
+
+            let updateSummary = backendUpdateSummary(
+                newVocabularyCount: response.newVocabularyCount,
+                correctedVocabularyCount: response.correctedVocabularyCount
+            )
+            setSyncMessage("Mit Backend synchronisiert\(updateSummary.map { ": \($0)" } ?? "")", result: .success)
+        } catch {
+            setSyncMessage("Backend-Sync fehlgeschlagen: \(error.localizedDescription)", result: .failure)
+        }
+    }
+
+    public func checkForBackendVocabularyUpdates() async {
+        isSyncing = true
+        setSyncMessage("Suche im Backend nach neuen Vokabeln ...", result: .working)
+        defer { isSyncing = false }
+
+        do {
+            let response = try await backendClient.checkVocabularyUpdates(request: BackendVocabularyUpdateRequest(
+                deviceID: deviceID,
+                knownCatalogEntryIDs: catalogEntries.map(\.id)
+            ))
+
+            guard let catalogCSV = response.catalogCSV else {
+                lastVocabularyUpdateCheckDate = Date()
+                vocabularyUpdateSummary = "Keine neuen oder korrigierten Vokabeln"
+                setSyncMessage("Keine neuen Vokabeln im Backend gefunden", result: .success)
+                return
+            }
+
+            try applyBackendCatalogCSV(
+                catalogCSV,
+                newVocabularyCount: response.newVocabularyCount,
+                correctedVocabularyCount: response.correctedVocabularyCount
+            )
+            rebuildEntries()
+            try persistCatalog()
+            try persistProgressCache()
+
+            let updateSummary = backendUpdateSummary(
+                newVocabularyCount: response.newVocabularyCount,
+                correctedVocabularyCount: response.correctedVocabularyCount
+            ) ?? "Vokabel-Katalog aktualisiert"
+            setSyncMessage("\(updateSummary) uebernommen", result: .success)
+        } catch {
+            setSyncMessage("Backend-Update fehlgeschlagen: \(error.localizedDescription)", result: .failure)
         }
     }
 
@@ -386,6 +465,28 @@ public final class VocabularyStore: ObservableObject {
     private func updateMessagePart(count: Int, singular: String, plural: String) -> String? {
         guard count > 0 else { return nil }
         return "\(count) \(count == 1 ? singular : plural)"
+    }
+
+    private func applyBackendCatalogCSV(
+        _ catalogCSV: String,
+        newVocabularyCount: Int,
+        correctedVocabularyCount: Int
+    ) throws {
+        catalogEntries = try codec.decode(catalogCSV).map(\.strippingProgress)
+        lastVocabularyUpdateCheckDate = Date()
+        vocabularyUpdateSummary = backendUpdateSummary(
+            newVocabularyCount: newVocabularyCount,
+            correctedVocabularyCount: correctedVocabularyCount
+        ) ?? "\(catalogEntries.count) Vokabeln im lokalen Katalog"
+    }
+
+    private func backendUpdateSummary(newVocabularyCount: Int, correctedVocabularyCount: Int) -> String? {
+        let messageParts = [
+            updateMessagePart(count: newVocabularyCount, singular: "neue Vokabel", plural: "neue Vokabeln"),
+            updateMessagePart(count: correctedVocabularyCount, singular: "korrigierte Vokabel", plural: "korrigierte Vokabeln")
+        ].compactMap { $0 }
+        guard !messageParts.isEmpty else { return nil }
+        return messageParts.joined(separator: ", ")
     }
 
     private func encodeEvents(_ events: [ProgressEvent]) -> String {

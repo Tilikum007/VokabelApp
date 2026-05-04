@@ -69,13 +69,13 @@ public struct TrainingEngine {
         let expected = direction == .germanToNorwegian ? entry.norwegian : entry.german
         let expectedArticle = direction == .germanToNorwegian ? cleanArticle(entry.article) : ""
         let prompt = direction == .germanToNorwegian ? entry.german : norwegianPrompt(for: entry)
-        let distractors = allEntries
-            .filter { $0.id != entry.id && $0.isActive }
-            .map { direction == .germanToNorwegian ? $0.norwegian : $0.german }
-            .filter { !$0.isEmpty && $0 != expected }
-            .uniqued()
-            .shuffled()
-            .prefix(max(0, optionsCount - 1))
+        let distractors = makeDistractors(
+            for: entry,
+            expected: expected,
+            direction: direction,
+            allEntries: allEntries,
+            count: max(0, optionsCount - 1)
+        )
         let articleOptions = makeArticleOptions(expectedArticle: expectedArticle, entries: allEntries)
 
         return TrainingQuestion(
@@ -165,6 +165,38 @@ public struct TrainingEngine {
                 if right == expectedArticle { return false }
                 return left < right
             }
+    }
+
+    private func makeDistractors(
+        for entry: VocabularyEntry,
+        expected: String,
+        direction: QuestionDirection,
+        allEntries: [VocabularyEntry],
+        count: Int
+    ) -> [String] {
+        guard count > 0 else { return [] }
+
+        let sameGroup = normalizedPartOfSpeech(entry.partOfSpeech)
+        let candidates = allEntries.filter { $0.id != entry.id && $0.isActive }
+        let preferred = candidates.filter {
+            !sameGroup.isEmpty && normalizedPartOfSpeech($0.partOfSpeech) == sameGroup
+        }
+        let fallback = candidates.filter {
+            sameGroup.isEmpty || normalizedPartOfSpeech($0.partOfSpeech) != sameGroup
+        }
+
+        return (preferred.shuffled() + fallback.shuffled())
+            .map { direction == .germanToNorwegian ? $0.norwegian : $0.german }
+            .filter { !$0.isEmpty && $0 != expected }
+            .uniqued()
+            .prefix(count)
+            .shuffled()
+    }
+
+    private func normalizedPartOfSpeech(_ value: String) -> String {
+        value.trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+            .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
     }
 
     private func norwegianPrompt(for entry: VocabularyEntry) -> String {

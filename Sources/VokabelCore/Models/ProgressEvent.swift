@@ -1,6 +1,6 @@
 import Foundation
 
-public struct ProgressEvent: Codable, Equatable, Identifiable, Hashable {
+public struct ProgressEvent: Codable, Equatable, Identifiable, Hashable, Sendable {
     public var id: UUID
     public var entryID: String
     public var learner: Learner

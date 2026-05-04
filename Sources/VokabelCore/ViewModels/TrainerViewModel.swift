@@ -5,6 +5,7 @@ import Combine
 public final class TrainerViewModel: ObservableObject {
     @Published public var learner: Learner = .papa {
         didSet {
+            UserDefaults.standard.set(learner.rawValue, forKey: Self.learnerDefaultsKey)
             normalizeFilter(for: store.entries)
         }
     }
@@ -19,14 +20,30 @@ public final class TrainerViewModel: ObservableObject {
     @Published public var selectedArticle = ""
     @Published public var selectedChoice = ""
     @Published public var feedback: FeedbackState?
-    @Published public var sessionSize = 10
+    @Published public var sessionSize = 10 {
+        didSet {
+            UserDefaults.standard.set(sessionSize, forKey: Self.sessionSizeDefaultsKey)
+        }
+    }
     @Published public var sessionTotal = 0
     @Published public var correctCount = 0
     @Published public var wrongCount = 0
     @Published public var remaining = 0
-    @Published public var directionMode: DirectionMode = .germanToNorwegian
-    @Published public var trainingFocus: TrainingFocus = .vocabulary
-    @Published public var answerMode: AnswerMode
+    @Published public var directionMode: DirectionMode = .germanToNorwegian {
+        didSet {
+            UserDefaults.standard.set(directionMode.rawValue, forKey: Self.directionModeDefaultsKey)
+        }
+    }
+    @Published public var trainingFocus: TrainingFocus = .vocabulary {
+        didSet {
+            UserDefaults.standard.set(trainingFocus.rawValue, forKey: Self.trainingFocusDefaultsKey)
+        }
+    }
+    @Published public var answerMode: AnswerMode {
+        didSet {
+            UserDefaults.standard.set(answerMode.rawValue, forKey: Self.answerModeDefaultsKey)
+        }
+    }
     @Published public private(set) var sessionMessage: String?
     @Published public private(set) var sessionMistakes: [SessionMistake] = []
     @Published public private(set) var masterValidationReport: MasterValidationReport?
@@ -41,10 +58,20 @@ public final class TrainerViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private var isNormalizingFilter = false
 
+    private static let learnerDefaultsKey = "de.papa.vokabelapp.settings.learner"
+    private static let directionModeDefaultsKey = "de.papa.vokabelapp.settings.directionMode"
+    private static let trainingFocusDefaultsKey = "de.papa.vokabelapp.settings.trainingFocus"
+    private static let answerModeDefaultsKey = "de.papa.vokabelapp.settings.answerMode"
+    private static let sessionSizeDefaultsKey = "de.papa.vokabelapp.settings.sessionSize"
+
     public init(store: VocabularyStore, auth: AuthCoordinator = AuthCoordinator()) {
         self.store = store
         self.auth = auth
-        self.answerMode = TrainerViewModel.defaultAnswerMode
+        self.learner = Self.persistedLearner
+        self.directionMode = Self.persistedDirectionMode
+        self.trainingFocus = Self.persistedTrainingFocus
+        self.answerMode = Self.persistedAnswerMode
+        self.sessionSize = Self.persistedSessionSize
 
         store.$entries
             .receive(on: RunLoop.main)
@@ -87,37 +114,19 @@ public final class TrainerViewModel: ObservableObject {
     }
 
     public func syncNow() async {
-        guard let accessToken = auth.accessToken else {
-            store.setSyncMessage("Bitte zuerst mit Google anmelden")
-            return
-        }
-
-        await store.syncFromDrive(accessToken: accessToken)
+        await store.syncWithBackend()
     }
 
     public func uploadNow() async {
-        guard let accessToken = auth.accessToken else {
-            store.setSyncMessage("Bitte zuerst mit Google anmelden")
-            return
-        }
-
-        await store.uploadToDrive(accessToken: accessToken)
+        await store.syncWithBackend()
     }
 
     public func checkVocabularyUpdates() async {
-        guard let accessToken = auth.accessToken else {
-            store.setSyncMessage("Bitte zuerst mit Google anmelden")
-            return
-        }
-
-        await store.checkForVocabularyUpdates(accessToken: accessToken)
+        await store.checkForBackendVocabularyUpdates()
     }
 
     public func signInAndSync() async {
-        await auth.signIn()
-        if auth.isSignedIn {
-            await syncNow()
-        }
+        await syncNow()
     }
 
     public func handleOpenURL(_ url: URL) {
@@ -313,6 +322,44 @@ public final class TrainerViewModel: ObservableObject {
         #else
         .typed
         #endif
+    }
+
+    private static var persistedLearner: Learner {
+        guard let rawValue = UserDefaults.standard.string(forKey: learnerDefaultsKey),
+              let learner = Learner(rawValue: rawValue) else {
+            return .papa
+        }
+        return learner
+    }
+
+    private static var persistedDirectionMode: DirectionMode {
+        guard let rawValue = UserDefaults.standard.string(forKey: directionModeDefaultsKey),
+              let mode = DirectionMode(rawValue: rawValue) else {
+            return .germanToNorwegian
+        }
+        return mode
+    }
+
+    private static var persistedTrainingFocus: TrainingFocus {
+        guard let rawValue = UserDefaults.standard.string(forKey: trainingFocusDefaultsKey),
+              let focus = TrainingFocus(rawValue: rawValue) else {
+            return .vocabulary
+        }
+        return focus
+    }
+
+    private static var persistedAnswerMode: AnswerMode {
+        guard let rawValue = UserDefaults.standard.string(forKey: answerModeDefaultsKey),
+              let mode = AnswerMode(rawValue: rawValue) else {
+            return defaultAnswerMode
+        }
+        return mode
+    }
+
+    private static var persistedSessionSize: Int {
+        let value = UserDefaults.standard.integer(forKey: sessionSizeDefaultsKey)
+        guard value > 0 else { return 10 }
+        return value
     }
 
     private func normalizeFilter(for entries: [VocabularyEntry]) {

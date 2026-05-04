@@ -1,8 +1,17 @@
 import Foundation
 
-public enum CSVCodecError: Error, Equatable {
+public enum CSVCodecError: LocalizedError, Equatable {
     case missingHeader
     case invalidColumnCount(row: Int, expected: Int, actual: Int)
+
+    public var errorDescription: String? {
+        switch self {
+        case .missingHeader:
+            return "Die CSV-Datei hat keine Kopfzeile."
+        case let .invalidColumnCount(row, expected, actual):
+            return "CSV-Zeile \(row) hat \(actual) Spalten, erwartet wurden \(expected)."
+        }
+    }
 }
 
 public struct CSVCodec {
