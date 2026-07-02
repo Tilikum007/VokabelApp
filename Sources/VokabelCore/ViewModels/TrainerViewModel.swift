@@ -58,11 +58,11 @@ public final class TrainerViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private var isNormalizingFilter = false
 
-    private static let learnerDefaultsKey = "de.papa.vokabelapp.settings.learner"
-    private static let directionModeDefaultsKey = "de.papa.vokabelapp.settings.directionMode"
-    private static let trainingFocusDefaultsKey = "de.papa.vokabelapp.settings.trainingFocus"
-    private static let answerModeDefaultsKey = "de.papa.vokabelapp.settings.answerMode"
-    private static let sessionSizeDefaultsKey = "de.papa.vokabelapp.settings.sessionSize"
+    private static let learnerDefaultsKey = "de.papa.tiliku.settings.learner"
+    private static let directionModeDefaultsKey = "de.papa.tiliku.settings.directionMode"
+    private static let trainingFocusDefaultsKey = "de.papa.tiliku.settings.trainingFocus"
+    private static let answerModeDefaultsKey = "de.papa.tiliku.settings.answerMode"
+    private static let sessionSizeDefaultsKey = "de.papa.tiliku.settings.sessionSize"
 
     public init(store: VocabularyStore, auth: AuthCoordinator = AuthCoordinator()) {
         self.store = store

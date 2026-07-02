@@ -36,7 +36,7 @@ targets:
       - Sources/VokabelCore/Resources
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: de.papa.vokabelapp.core
+        PRODUCT_BUNDLE_IDENTIFIER: de.papa.tiliku.core
         GENERATE_INFOPLIST_FILE: YES
         CODE_SIGN_STYLE: Automatic
 
@@ -49,7 +49,7 @@ targets:
       - target: VokabelCore
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: de.papa.vokabelapp
+        PRODUCT_BUNDLE_IDENTIFIER: de.papa.tiliku
         INFOPLIST_FILE: App/Info.plist
         CODE_SIGN_ENTITLEMENTS: App/VokabelApp.entitlements
         LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/../Frameworks @executable_path/Frameworks"

@@ -80,7 +80,7 @@ VOKABEL_BACKEND_BASE_URL=http://127.0.0.1:8080
 Prerequisites:
 
 - Apple Developer membership for team `Y3B24T9MUD`.
-- App Store Connect app record for bundle ID `de.papa.vokabelapp`.
+- App Store Connect app record for bundle ID `de.papa.tiliku` with SKU `Tiliku00002`.
 - Xcode account or App Store Connect API key with permission to create signing assets and upload builds.
 - A reachable production or beta backend URL for testers. Release builds intentionally do not hard-code the local LAN backend.
 

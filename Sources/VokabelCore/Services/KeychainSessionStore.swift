@@ -11,7 +11,7 @@ public final class KeychainSessionStore: @unchecked Sendable {
     private let service: String
     private let account: String
 
-    public init(service: String = "de.papa.vokabelapp.google", account: String = "google-session") {
+    public init(service: String = "de.papa.tiliku.google", account: String = "google-session") {
         self.service = service
         self.account = account
     }

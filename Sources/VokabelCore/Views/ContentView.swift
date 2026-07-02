@@ -12,7 +12,7 @@ public struct ContentView: View {
     @State private var showsWhatsNewPopup = false
     @State private var didPresentWelcome = false
 
-    private static let whatsNewDefaultsKey = "de.papa.vokabelapp.whatsNew.backend-home-choice-groups-2026-05-04"
+    private static let whatsNewDefaultsKey = "de.papa.tiliku.whatsNew.backend-home-choice-groups-2026-05-04"
 
     public init(viewModel: TrainerViewModel) {
         self.viewModel = viewModel
