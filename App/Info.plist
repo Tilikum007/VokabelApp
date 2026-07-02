@@ -20,18 +20,18 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>VokabelBackendBaseURL</key>
-	<string>http://192.168.178.79:8080</string>
+	<string>$(VOKABEL_BACKEND_BASE_URL)</string>
 	<key>VokabelBackendFallbackBaseURLs</key>
 	<array>
-		<string>http://169.254.1.242:8080</string>
-		<string>http://MQ-Pro2-Papale.local:8080</string>
-		<string>http://Work-Mac.local:8080</string>
+		<string>$(VOKABEL_BACKEND_FALLBACK_1)</string>
+		<string>$(VOKABEL_BACKEND_FALLBACK_2)</string>
+		<string>$(VOKABEL_BACKEND_FALLBACK_3)</string>
 	</array>
 	<key>NSAppTransportSecurity</key>
 	<dict>
-		<key>NSAllowsArbitraryLoads</key>
-		<true/>
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>

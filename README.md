@@ -61,6 +61,16 @@ For local development, `Backend/Data/` is ignored by Git and may be used as a te
 
 Google Drive support remains in the codebase as a legacy migration path, but app sync buttons now use the backend client.
 
+## TestFlight
+
+The iOS app is prepared for TestFlight through XcodeGen and an archive script:
+
+```sh
+VOKABEL_BACKEND_BASE_URL=http://192.168.178.79:8080 Scripts/archive-testflight.sh
+```
+
+Release builds do not hard-code the local backend URL. Set `VOKABEL_BACKEND_BASE_URL` for the local, beta, or production backend before archiving.
+
 ## Legacy Google Drive
 
 The previous Drive master file ID was:

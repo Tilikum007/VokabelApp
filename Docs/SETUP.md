@@ -74,3 +74,28 @@ VOKABEL_BACKEND_BASE_URL=http://127.0.0.1:8080
 ```
 
 `Backend/Data/` is ignored by Git and is only a local runtime cache. The app and future imports should use the running backend under `Application Support` as the source of truth unless explicitly told otherwise.
+
+## TestFlight
+
+Prerequisites:
+
+- Apple Developer membership for team `Y3B24T9MUD`.
+- App Store Connect app record for bundle ID `de.papa.vokabelapp`.
+- Xcode account or App Store Connect API key with permission to create signing assets and upload builds.
+- A reachable production or beta backend URL for testers. Release builds intentionally do not hard-code the local LAN backend.
+
+Prepare and upload a TestFlight archive. Set the backend URL explicitly so the TestFlight build can reach the running backend:
+
+```sh
+VOKABEL_BACKEND_BASE_URL=http://192.168.178.79:8080 Scripts/archive-testflight.sh
+```
+
+For a release candidate that should talk to a hosted beta backend, use that URL instead:
+
+```sh
+VOKABEL_BACKEND_BASE_URL=https://your-backend.example.com Scripts/archive-testflight.sh
+```
+
+The script regenerates `VokabelApp.xcodeproj`, archives the iOS app with automatic signing, and exports/uploads using `Configs/ExportOptions-TestFlight.plist`.
+
+After upload, open App Store Connect, wait for processing, add beta metadata, and invite internal testers. External testers require Beta App Review.
