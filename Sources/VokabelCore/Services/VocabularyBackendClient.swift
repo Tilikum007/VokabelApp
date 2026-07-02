@@ -158,11 +158,18 @@ public enum VocabularyBackendConfiguration {
 public struct BackendSyncRequest: Encodable, Equatable, Sendable {
     public var deviceID: String
     public var knownCatalogEntryIDs: [String]
+    public var knownCatalogVersion: String?
     public var progressEvents: [ProgressEvent]
 
-    public init(deviceID: String, knownCatalogEntryIDs: [String], progressEvents: [ProgressEvent]) {
+    public init(
+        deviceID: String,
+        knownCatalogEntryIDs: [String],
+        knownCatalogVersion: String? = nil,
+        progressEvents: [ProgressEvent]
+    ) {
         self.deviceID = deviceID
         self.knownCatalogEntryIDs = knownCatalogEntryIDs
+        self.knownCatalogVersion = knownCatalogVersion
         self.progressEvents = progressEvents
     }
 }
@@ -192,10 +199,12 @@ public struct BackendSyncResponse: Decodable, Equatable, Sendable {
 public struct BackendVocabularyUpdateRequest: Encodable, Equatable, Sendable {
     public var deviceID: String
     public var knownCatalogEntryIDs: [String]
+    public var knownCatalogVersion: String?
 
-    public init(deviceID: String, knownCatalogEntryIDs: [String]) {
+    public init(deviceID: String, knownCatalogEntryIDs: [String], knownCatalogVersion: String? = nil) {
         self.deviceID = deviceID
         self.knownCatalogEntryIDs = knownCatalogEntryIDs
+        self.knownCatalogVersion = knownCatalogVersion
     }
 }
 

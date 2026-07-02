@@ -54,7 +54,7 @@ class VocabularyBackend:
         progress_events = payload.get("progressEvents", [])
         merged_events = self._merge_progress_events(progress_events)
         catalog_csv = self.master_path.read_text(encoding="utf-8")
-        new_count, corrected_count = self._diff_counts(payload.get("knownCatalogEntryIDs", []), catalog_csv)
+        new_count, corrected_count = self._diff_counts(payload, catalog_csv)
         return {
             "catalogCSV": self._catalog_csv(catalog_csv),
             "progressEvents": merged_events,
@@ -65,7 +65,7 @@ class VocabularyBackend:
 
     def vocabulary_updates(self, payload: dict) -> dict:
         catalog_csv = self.master_path.read_text(encoding="utf-8")
-        new_count, corrected_count = self._diff_counts(payload.get("knownCatalogEntryIDs", []), catalog_csv)
+        new_count, corrected_count = self._diff_counts(payload, catalog_csv)
         has_updates = new_count > 0 or corrected_count > 0
         return {
             "catalogCSV": self._catalog_csv(catalog_csv) if has_updates else None,
@@ -201,11 +201,19 @@ class VocabularyBackend:
         except (OSError, json.JSONDecodeError):
             return []
 
-    def _diff_counts(self, known_ids: list[str], catalog_csv: str) -> tuple[int, int]:
+    def _diff_counts(self, payload: dict, catalog_csv: str) -> tuple[int, int]:
+        known_ids = payload.get("knownCatalogEntryIDs", [])
         known = set(known_ids if isinstance(known_ids, list) else [])
         rows = list(csv.DictReader(StringIO(catalog_csv.lstrip("\ufeff"))))
         new_count = sum(1 for row in rows if row.get("ID", "") not in known)
-        return new_count, 0
+        known_version = payload.get("knownCatalogVersion", "")
+        current_version = self._catalog_version()
+        corrected_count = 0
+        if known_version and known_version != current_version:
+            corrected_count = sum(1 for row in rows if row.get("ID", "") in known)
+        elif not known_version and new_count == 0 and rows:
+            corrected_count = 1
+        return new_count, corrected_count
 
     def _next_id_number(self, rows: list[dict]) -> int:
         numbers = []

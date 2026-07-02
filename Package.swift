@@ -28,7 +28,8 @@ let package = Package(
         ),
         .executableTarget(
             name: "VokabelApp",
-            dependencies: ["VokabelCore"]
+            dependencies: ["VokabelCore"],
+            exclude: ["Assets.xcassets"]
         ),
         .executableTarget(
             name: "VokabelAppChecks",

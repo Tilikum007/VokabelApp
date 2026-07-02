@@ -1,10 +1,20 @@
 # Vokabel Backend Contract
 
-The backend owns the canonical vocabulary catalog. Apps keep local progress events and ask the backend for catalog and progress synchronization.
+The running backend owns the canonical vocabulary catalog. Apps keep local progress events and ask the backend for catalog and progress synchronization.
+
+Canonical local runtime files:
+
+```text
+/Users/patrickstange/Library/Application Support/VokabelAppBackend/data/MASTER_vokabelheft_norwegisch.csv
+/Users/patrickstange/Library/Application Support/VokabelAppBackend/data/catalog_version.txt
+/Users/patrickstange/Library/Application Support/VokabelAppBackend/data/progress_events.json
+```
+
+The repository copy in `Sources/VokabelCore/Resources/MASTER_vokabelheft_norwegisch.csv` is only a bootstrap/fallback snapshot for first launch and tests. It should be refreshed from the running backend, never edited as the source of truth.
 
 ## Responsibilities
 
-- Store `MASTER_vokabelheft_norwegisch.csv` as the canonical catalog.
+- Store `MASTER_vokabelheft_norwegisch.csv` as the canonical catalog in the running backend data directory.
 - Accept new vocabulary batches from an admin/import flow.
 - Validate and normalize new entries before writing them to the master catalog.
 - Preserve existing CSV IDs and assign stable IDs to new rows.
@@ -32,6 +42,7 @@ Request:
 {
   "deviceID": "device-uuid",
   "knownCatalogEntryIDs": ["NO0001", "NO0002"],
+  "knownCatalogVersion": "2026-05-04T08:15:00Z",
   "progressEvents": [
     {
       "id": "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEE1",
@@ -68,7 +79,8 @@ Request:
 ```json
 {
   "deviceID": "device-uuid",
-  "knownCatalogEntryIDs": ["NO0001", "NO0002"]
+  "knownCatalogEntryIDs": ["NO0001", "NO0002"],
+  "knownCatalogVersion": "2026-05-04T08:15:00Z"
 }
 ```
 

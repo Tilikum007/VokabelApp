@@ -32,6 +32,19 @@ The app syncs vocabulary through the backend contract in:
 
 `Docs/BACKEND_CONTRACT.md`
 
+The canonical development data source is the running backend data directory:
+
+```text
+/Users/patrickstange/Library/Application Support/VokabelAppBackend/data
+```
+
+Refresh the repository fallback snapshot from that data source when needed:
+
+```sh
+cp "/Users/patrickstange/Library/Application Support/VokabelAppBackend/data/MASTER_vokabelheft_norwegisch.csv" \
+  Sources/VokabelCore/Resources/MASTER_vokabelheft_norwegisch.csv
+```
+
 Set the backend URL in `App/Info.plist`:
 
 ```xml
@@ -59,3 +72,5 @@ Then configure the app with:
 ```text
 VOKABEL_BACKEND_BASE_URL=http://127.0.0.1:8080
 ```
+
+`Backend/Data/` is ignored by Git and is only a local runtime cache. The app and future imports should use the running backend under `Application Support` as the source of truth unless explicitly told otherwise.

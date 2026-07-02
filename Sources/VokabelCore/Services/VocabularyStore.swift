@@ -19,6 +19,7 @@ public final class VocabularyStore: ObservableObject {
     private let remoteMasterName = "MASTER_vokabelheft_norwegisch.csv"
     private let archivedMasterName = "MASTER_vokabelheft_norwegisch_alt.csv"
     private let deviceID: String
+    private let backendCatalogVersionKey = "vokabelapp.backendCatalogVersion"
 
     private var catalogEntries: [VocabularyEntry] = []
     private var knownProgressEvents: [ProgressEvent] = []
@@ -125,6 +126,7 @@ public final class VocabularyStore: ObservableObject {
             let response = try await backendClient.sync(request: BackendSyncRequest(
                 deviceID: deviceID,
                 knownCatalogEntryIDs: catalogEntries.map(\.id),
+                knownCatalogVersion: knownBackendCatalogVersion(),
                 progressEvents: knownProgressEvents
             ))
 
@@ -133,6 +135,7 @@ public final class VocabularyStore: ObservableObject {
                 newVocabularyCount: response.newVocabularyCount,
                 correctedVocabularyCount: response.correctedVocabularyCount
             )
+            rememberBackendCatalogVersion(response.catalogVersion)
             knownProgressEvents = deduplicateEvents(response.progressEvents + knownProgressEvents)
             for learner in Learner.allCases {
                 try persistLocalEvents(knownProgressEvents.filter { $0.learner == learner }, for: learner)
@@ -159,7 +162,8 @@ public final class VocabularyStore: ObservableObject {
         do {
             let response = try await backendClient.checkVocabularyUpdates(request: BackendVocabularyUpdateRequest(
                 deviceID: deviceID,
-                knownCatalogEntryIDs: catalogEntries.map(\.id)
+                knownCatalogEntryIDs: catalogEntries.map(\.id),
+                knownCatalogVersion: knownBackendCatalogVersion()
             ))
 
             guard let catalogCSV = response.catalogCSV else {
@@ -174,6 +178,7 @@ public final class VocabularyStore: ObservableObject {
                 newVocabularyCount: response.newVocabularyCount,
                 correctedVocabularyCount: response.correctedVocabularyCount
             )
+            rememberBackendCatalogVersion(response.catalogVersion)
             rebuildEntries()
             try persistCatalog()
             try persistProgressCache()
@@ -478,6 +483,15 @@ public final class VocabularyStore: ObservableObject {
             newVocabularyCount: newVocabularyCount,
             correctedVocabularyCount: correctedVocabularyCount
         ) ?? "\(catalogEntries.count) Vokabeln im lokalen Katalog"
+    }
+
+    private func knownBackendCatalogVersion() -> String? {
+        UserDefaults.standard.string(forKey: backendCatalogVersionKey)
+    }
+
+    private func rememberBackendCatalogVersion(_ version: String?) {
+        guard let version, !version.isEmpty else { return }
+        UserDefaults.standard.set(version, forKey: backendCatalogVersionKey)
     }
 
     private func backendUpdateSummary(newVocabularyCount: Int, correctedVocabularyCount: Int) -> String? {

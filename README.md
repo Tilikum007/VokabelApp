@@ -17,7 +17,7 @@ The app is currently structured as:
 - Low levels and entries not asked for a long time are preferred.
 - The same word is not repeated immediately.
 - CSV IDs are never changed.
-- After every answer the local CSV copy is updated.
+- After every answer the app records a local progress event and rebuilds progress from events.
 
 ## Platform Behavior
 
@@ -26,9 +26,17 @@ The app is currently structured as:
 
 ## Backend Sync
 
-The canonical master file is no longer owned by Google Drive. The backend owns:
+The canonical master file is no longer owned by Google Drive or the Norwegisch project folder. The running backend owns:
 
-`MASTER_vokabelheft_norwegisch.csv`
+`/Users/patrickstange/Library/Application Support/VokabelAppBackend/data/MASTER_vokabelheft_norwegisch.csv`
+
+The backend catalog version is stored beside it in:
+
+`/Users/patrickstange/Library/Application Support/VokabelAppBackend/data/catalog_version.txt`
+
+The repository resource file is a bootstrap/fallback snapshot only:
+
+`Sources/VokabelCore/Resources/MASTER_vokabelheft_norwegisch.csv`
 
 The app talks to the backend through:
 
@@ -48,6 +56,8 @@ The app-side REST client is `VocabularyBackendClient`. The backend contract is d
 The repository also contains a small standard-library reference backend:
 
 `Backend/vokabel_backend.py`
+
+For local development, `Backend/Data/` is ignored by Git and may be used as a temporary backend data directory. Do not treat it as the canonical catalog.
 
 Google Drive support remains in the codebase as a legacy migration path, but app sync buttons now use the backend client.
 
