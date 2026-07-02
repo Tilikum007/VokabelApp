@@ -285,6 +285,8 @@ class Handler(BaseHTTPRequestHandler):
             elif path == "/v1/vocabulary/updates":
                 self._write_json(self.backend.vocabulary_updates(payload))
             elif path == "/v1/admin/vocabulary/import":
+                if os.environ.get("VOKABEL_BACKEND_ENABLE_ADMIN_IMPORT", "").lower() not in ("1", "true", "yes"):
+                    raise BackendError(403, "admin import disabled")
                 self._write_json(self.backend.import_vocabulary(payload))
             else:
                 raise BackendError(404, "not found")
