@@ -82,15 +82,15 @@ Prerequisites:
 - Apple Developer membership for team `Y3B24T9MUD`.
 - App Store Connect app record for bundle ID `de.papa.tiliku` with SKU `Tiliku00002`.
 - Xcode account or App Store Connect API key with permission to create signing assets and upload builds.
-- A reachable production or beta backend URL for testers. Release builds intentionally do not hard-code the local LAN backend.
+- A reachable production or beta backend URL for testers. The default hosted backend is `https://vokabel.37.27.90.180.sslip.io`.
 
-Prepare and upload a TestFlight archive. Set the backend URL explicitly so the TestFlight build can reach the running backend:
+Prepare and upload a TestFlight archive. By default the script uses the hosted backend on Servergroß:
 
 ```sh
-VOKABEL_BACKEND_BASE_URL=http://192.168.178.79:8080 Scripts/archive-testflight.sh
+Scripts/archive-testflight.sh
 ```
 
-For a release candidate that should talk to a hosted beta backend, use that URL instead:
+To override the backend URL for a specific archive, set it explicitly:
 
 ```sh
 VOKABEL_BACKEND_BASE_URL=https://your-backend.example.com Scripts/archive-testflight.sh

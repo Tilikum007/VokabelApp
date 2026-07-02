@@ -10,7 +10,7 @@ TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
 ARCHIVE_PATH="${ARCHIVE_PATH:-$ROOT_DIR/build/TestFlight/$SCHEME-$TIMESTAMP.xcarchive}"
 EXPORT_PATH="${EXPORT_PATH:-$ROOT_DIR/build/TestFlight/export-$TIMESTAMP}"
 EXPORT_OPTIONS="${EXPORT_OPTIONS:-$ROOT_DIR/Configs/ExportOptions-TestFlight.plist}"
-BACKEND_BASE_URL="${VOKABEL_BACKEND_BASE_URL:-}"
+BACKEND_BASE_URL="${VOKABEL_BACKEND_BASE_URL:-https://vokabel.37.27.90.180.sslip.io}"
 
 if ! command -v xcodegen >/dev/null 2>&1; then
   echo "xcodegen fehlt. Installation: brew install xcodegen" >&2
@@ -19,7 +19,7 @@ fi
 
 if [[ -z "$BACKEND_BASE_URL" ]]; then
   echo "VOKABEL_BACKEND_BASE_URL fehlt. Beispiel:" >&2
-  echo "VOKABEL_BACKEND_BASE_URL=http://192.168.178.79:8080 Scripts/archive-testflight.sh" >&2
+  echo "VOKABEL_BACKEND_BASE_URL=https://vokabel.37.27.90.180.sslip.io Scripts/archive-testflight.sh" >&2
   exit 2
 fi
 

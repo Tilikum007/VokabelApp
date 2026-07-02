@@ -1,0 +1,15 @@
+services:
+  vokabel-backend:
+    build:
+      context: ./app
+      dockerfile: Backend/Dockerfile
+    container_name: vokabel-backend
+    restart: unless-stopped
+    environment:
+      VOKABEL_BACKEND_HOST: 0.0.0.0
+      VOKABEL_BACKEND_PORT: 8080
+      VOKABEL_BACKEND_DATA_DIR: /data
+    volumes:
+      - ./data:/data
+    ports:
+      - "127.0.0.1:8021:8080"

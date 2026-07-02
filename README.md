@@ -66,10 +66,10 @@ Google Drive support remains in the codebase as a legacy migration path, but app
 The iOS app is prepared for TestFlight through XcodeGen and an archive script:
 
 ```sh
-VOKABEL_BACKEND_BASE_URL=http://192.168.178.79:8080 Scripts/archive-testflight.sh
+Scripts/archive-testflight.sh
 ```
 
-Release builds do not hard-code the local backend URL. Set `VOKABEL_BACKEND_BASE_URL` for the local, beta, or production backend before archiving.
+Release builds default to the hosted backend at `https://vokabel.37.27.90.180.sslip.io`. Set `VOKABEL_BACKEND_BASE_URL` to override this for a local, beta, or production backend before archiving.
 
 ## Legacy Google Drive
 
